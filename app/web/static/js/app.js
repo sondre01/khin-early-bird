@@ -123,6 +123,7 @@ async function fetchJobs() {
     const score = document.getElementById('filter-score').value;
     const status = document.getElementById('filter-status').value;
     const sortBy = document.getElementById('filter-sort') ? document.getElementById('filter-sort').value : 'recent';
+    const hideApplied = document.getElementById('toggle-hide-applied') ? document.getElementById('toggle-hide-applied').checked : false;
     const search = document.getElementById('search-input').value.trim();
 
     let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}&sort_by=${encodeURIComponent(sortBy)}`;
@@ -130,6 +131,7 @@ async function fetchJobs() {
     if (source !== 'all') url += `&source=${encodeURIComponent(source)}`;
     if (parseInt(score) > 0) url += `&min_score=${encodeURIComponent(score)}`;
     if (status !== 'all') url += `&status=${encodeURIComponent(status)}`;
+    if (hideApplied) url += `&hide_applied=true`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
 
     try {
@@ -168,10 +170,16 @@ function renderJobCard(job) {
 
     const statusBadge = job.status === 'applied' 
         ? `<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Applied</span>`
-        : (job.status === 'saved' ? `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Saved</span>` : '');
+        : (job.status === 'saved' ? `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Saved</span>` 
+        : (job.status === 'dismissed' ? `<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">Hidden</span>` : ''));
+
+    // Action button depending on status
+    const hideOrRestoreBtn = job.status === 'dismissed'
+        ? `<button onclick="restoreJob(event, '${job.id}')" title="Restore / Unhide Application" class="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>`
+        : `<button onclick="dismissJob(event, '${job.id}')" title="Hide / Cancel Out (No chance or rejected)" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"><i data-lucide="eye-off" class="w-4 h-4"></i></button>`;
 
     return `
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+    <div id="job-card-${job.id}" class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
         <div class="space-y-3">
             <div class="flex items-start justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-1.5">
@@ -182,8 +190,16 @@ function renderJobCard(job) {
                     <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700">${roleName}</span>
                     ${statusBadge}
                 </div>
-                <div class="px-2.5 py-1 rounded-full text-xs font-black ${scoreColorClass} shadow-sm">
-                    ${score}% Match
+                <div class="flex items-center space-x-1">
+                    <div class="px-2.5 py-1 rounded-full text-xs font-black ${scoreColorClass} shadow-sm">
+                        ${score}% Match
+                    </div>
+                    <!-- Quick Mark Applied -->
+                    <button onclick="markApplied(event, '${job.id}')" title="${job.status === 'applied' ? 'Already Applied' : 'Mark as Applied'}" class="p-1.5 rounded-lg ${job.status === 'applied' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'} transition">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                    </button>
+                    <!-- Quick Hide / Cancel Out Symbol -->
+                    ${hideOrRestoreBtn}
                 </div>
             </div>
 
@@ -257,6 +273,7 @@ function resetFilters() {
     document.getElementById('filter-source').value = 'all';
     document.getElementById('filter-score').value = '0';
     document.getElementById('filter-status').value = 'all';
+    if (document.getElementById('toggle-hide-applied')) document.getElementById('toggle-hide-applied').checked = false;
     if (document.getElementById('filter-sort')) document.getElementById('filter-sort').value = 'recent';
     document.getElementById('search-input').value = '';
     setJobTypeFilter('all');
@@ -324,6 +341,59 @@ async function toggleJobStatus(jobId, status) {
         loadStats();
     } catch (e) {
         console.error('Error updating status:', e);
+    }
+}
+
+async function markApplied(e, jobId) {
+    if (e) e.stopPropagation();
+    try {
+        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: 'applied'})
+        });
+        fetchJobs();
+        loadStats();
+    } catch (err) {
+        console.error('Error marking applied:', err);
+    }
+}
+
+async function dismissJob(e, jobId) {
+    if (e) e.stopPropagation();
+    const card = document.getElementById(`job-card-${jobId}`);
+    if (card) {
+        card.style.transition = 'all 0.3s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+    }
+    try {
+        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: 'dismissed'})
+        });
+        setTimeout(() => {
+            fetchJobs();
+            loadStats();
+        }, 300);
+    } catch (err) {
+        console.error('Error dismissing job:', err);
+    }
+}
+
+async function restoreJob(e, jobId) {
+    if (e) e.stopPropagation();
+    try {
+        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: 'new'})
+        });
+        fetchJobs();
+        loadStats();
+    } catch (err) {
+        console.error('Error restoring job:', err);
     }
 }
 

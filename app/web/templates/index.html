@@ -346,12 +346,19 @@
                     <div class="flex items-center space-x-1">
                         <label class="font-semibold text-slate-600">Status:</label>
                         <select id="filter-status" onchange="fetchJobs()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="all">All Statuses</option>
+                            <option value="all">All Active</option>
                             <option value="new">New</option>
                             <option value="saved">Bookmarked</option>
                             <option value="applied">Applied</option>
+                            <option value="dismissed">🚫 Hidden / Rejected</option>
                         </select>
                     </div>
+
+                    <!-- Quick Hide Applied Checkbox -->
+                    <label class="flex items-center space-x-1.5 cursor-pointer bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 transition select-none">
+                        <input type="checkbox" id="toggle-hide-applied" onchange="fetchJobs()" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-xs font-semibold text-slate-700">Hide Applied</span>
+                    </label>
 
                     <!-- Sort By Priority Filter -->
                     <div class="flex items-center space-x-1">
@@ -793,6 +800,10 @@
                     </button>
                     <button onclick="toggleJobStatus(currentModalJobId, 'applied')" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition">
                         Mark as Applied
+                    </button>
+                    <button onclick="toggleJobStatus(currentModalJobId, 'dismissed')" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition flex items-center space-x-1" title="Hide/Cancel out this job">
+                        <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                        <span>Hide / Cancel</span>
                     </button>
                 </div>
                 <a id="modal-apply-link" href="#" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl transition shadow-sm flex items-center space-x-1.5">

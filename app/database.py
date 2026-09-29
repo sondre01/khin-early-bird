@@ -170,6 +170,7 @@ def get_jobs(
     min_score: Optional[int] = None,
     search: Optional[str] = None,
     status: Optional[str] = None,
+    hide_applied: bool = False,
     sort_by: Optional[str] = "recent",
     limit: int = 500,
     offset: int = 0
@@ -209,9 +210,17 @@ def get_jobs(
         query += " AND COALESCE(e.match_score, 0) >= ?"
         params.append(min_score)
         
-    if status and status.lower() != 'all':
+    if status and status.lower() not in ('all', 'active'):
         query += " AND j.status = ?"
         params.append(status)
+    elif status == 'dismissed':
+        query += " AND j.status = 'dismissed'"
+    else:
+        # Default: Hide dismissed/cancelled jobs
+        query += " AND (j.status IS NULL OR j.status != 'dismissed')"
+        
+    if hide_applied:
+        query += " AND (j.status IS NULL OR j.status != 'applied')"
         
     if search:
         search_pattern = f"%{search}%"

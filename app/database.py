@@ -4,10 +4,18 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.config import DB_PATH
 
+import shutil
+from pathlib import Path
+from app.config import DB_PATH, PROJECT_ROOT
+
 def get_connection() -> sqlite3.Connection:
+    if os.getenv("VERCEL") and not DB_PATH.exists():
+        seed_db = PROJECT_ROOT / "data" / "early_bird.db"
+        if seed_db.exists():
+            shutil.copyfile(seed_db, DB_PATH)
+
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
-    # Enable WAL mode for better concurrency
     conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 

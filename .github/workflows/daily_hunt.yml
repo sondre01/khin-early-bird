@@ -1,0 +1,46 @@
+name: Daily Job Hunt & AI Evaluation
+
+on:
+  schedule:
+    # 00:00 UTC = 08:00 AM Philippine Standard Time (PHT)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI anytime
+
+jobs:
+  scrape-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Extraction & AI Validation Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SMTP_HOST: smtp.gmail.com
+          SMTP_PORT: 587
+          SMTP_USER: gamboa.khinandrei@gmail.com
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          USER_EMAIL: gamboa.khinandrei@gmail.com
+          EMAIL_NOTIFICATIONS_ENABLED: "true"
+        run: |
+          python run_pipeline.py --limit 4
+
+      - name: Commit & Push Updated Database Snapshot
+        run: |
+          git config --global user.name "Early Bird Bot"
+          git config --global user.email "bot@earlybird.internal"
+          git add data/early_bird.db data/latest_digest.html
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(data): automated daily job database update [skip ci]" && git push)

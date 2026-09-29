@@ -4,7 +4,10 @@ from dotenv import load_dotenv
 
 # Base paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
+if os.getenv("VERCEL"):
+    DATA_DIR = Path("/tmp")
+else:
+    DATA_DIR = PROJECT_ROOT / "data"
 DOCS_DIR = PROJECT_ROOT / "documents"
 RESUME_DIR = DOCS_DIR / "resume"
 ENV_FILE = PROJECT_ROOT / ".env"

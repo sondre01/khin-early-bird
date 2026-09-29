@@ -111,6 +111,22 @@ def run_pipeline_worker():
     finally:
         active_pipeline_state["is_running"] = False
 
+@router.get("/api/cron")
+@router.post("/api/cron")
+async def api_cron_trigger(background_tasks: BackgroundTasks):
+    """Triggered daily by Vercel Cron or external schedulers"""
+    logger.info("Received automated cron trigger from cloud scheduler.")
+    orch = PipelineOrchestrator()
+    # Run synchronously in serverless context before lambda terminates
+    result = orch.run(limit_per_keyword=3, send_email=True)
+    return {
+        "status": "success",
+        "timestamp": datetime.now().isoformat(),
+        "total_analyzed": result.get("total_scraped"),
+        "high_matches": result.get("high_match_count"),
+        "email_sent": result.get("email_sent")
+    }
+
 @router.post("/api/pipeline/run")
 async def api_trigger_pipeline(background_tasks: BackgroundTasks):
     global active_pipeline_state

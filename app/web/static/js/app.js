@@ -1,5 +1,10 @@
 // Khin Early Bird 101 - Interactive Dashboard JS
 
+// If opened via VS Code Live Server (port 5500), route API requests to the Python backend on 8000
+const API_BASE = (window.location.port === '5500' || window.location.port === '5501' || window.location.port === '5502') 
+    ? 'http://127.0.0.1:8000' 
+    : '';
+
 let currentFilterJobType = 'all';
 let currentModalJobId = null;
 let sseConnection = null;
@@ -38,7 +43,7 @@ function switchTab(tabId) {
 // Stats & Overview
 async function loadStats() {
     try {
-        const res = await fetch('/api/stats');
+        const res = await fetch(`${API_BASE}/api/stats`);
         const data = await res.json();
 
         document.getElementById('stat-total-jobs').innerText = data.total_jobs || 0;
@@ -94,7 +99,7 @@ async function loadStats() {
 
 async function loadTopJobsPreview() {
     try {
-        const res = await fetch('/api/jobs?limit=6&min_score=80');
+        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80`);
         const data = await res.json();
         const container = document.getElementById('dashboard-top-jobs');
         if (!container) return;
@@ -119,7 +124,7 @@ async function fetchJobs() {
     const status = document.getElementById('filter-status').value;
     const search = document.getElementById('search-input').value.trim();
 
-    let url = `/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}`;
+    let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}`;
     if (category !== 'all') url += `&role_category=${encodeURIComponent(category)}`;
     if (source !== 'all') url += `&source=${encodeURIComponent(source)}`;
     if (parseInt(score) > 0) url += `&min_score=${encodeURIComponent(score)}`;
@@ -259,7 +264,7 @@ function resetFilters() {
 async function openJobModal(jobId) {
     currentModalJobId = jobId;
     try {
-        const res = await fetch(`/api/jobs/${jobId}`);
+        const res = await fetch(`${API_BASE}/api/jobs/${jobId}`);
         const job = await res.json();
 
         document.getElementById('modal-title').innerText = job.title;
@@ -307,7 +312,7 @@ function closeJobModal() {
 
 async function toggleJobStatus(jobId, status) {
     try {
-        await fetch(`/api/jobs/${jobId}/status`, {
+        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({status})
@@ -327,7 +332,7 @@ async function triggerPipelineRun() {
     btn.classList.add('opacity-75');
 
     try {
-        const res = await fetch('/api/pipeline/run', {method: 'POST'});
+        const res = await fetch(`${API_BASE}/api/pipeline/run`, {method: 'POST'});
         const data = await res.json();
         
         switchTab('phases');
@@ -353,7 +358,7 @@ function startSSEStream() {
 
     spinner.classList.remove('hidden');
 
-    sseConnection = new EventSource('/api/pipeline/stream');
+    sseConnection = new EventSource(`${API_BASE}/api/pipeline/stream`);
 
     sseConnection.onmessage = (event) => {
         try {
@@ -406,7 +411,7 @@ function startSSEStream() {
 
 async function pollPipelineStatus() {
     try {
-        const res = await fetch('/api/pipeline/status');
+        const res = await fetch(`${API_BASE}/api/pipeline/status`);
         const data = await res.json();
         if (data.is_running) {
             startSSEStream();
@@ -423,7 +428,7 @@ function clearConsoleLog() {
 // Settings & Profile
 async function loadSettings() {
     try {
-        const res = await fetch('/api/settings');
+        const res = await fetch(`${API_BASE}/api/settings`);
         const data = await res.json();
 
         document.getElementById('header-schedule-time').innerText = `${data.daily_run_time} AM`;
@@ -455,7 +460,7 @@ async function saveSettings() {
     if (scheduleTime) payload.daily_run_time = scheduleTime;
 
     try {
-        const res = await fetch('/api/settings', {
+        const res = await fetch(`${API_BASE}/api/settings`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
@@ -473,7 +478,7 @@ async function saveSettings() {
 async function testEmailNotification() {
     alert('Dispatching test verification email to gamboa.khinandrei@gmail.com...');
     try {
-        const res = await fetch('/api/email/test', {method: 'POST'});
+        const res = await fetch(`${API_BASE}/api/email/test`, {method: 'POST'});
         const data = await res.json();
         alert(data.message);
     } catch (e) {
@@ -482,7 +487,7 @@ async function testEmailNotification() {
 }
 
 function previewEmailDigest() {
-    window.open('/api/preview/digest', '_blank');
+    window.open(`${API_BASE}/api/preview/digest`, '_blank');
 }
 
 function togglePasswordVisibility(inputId) {
@@ -492,7 +497,7 @@ function togglePasswordVisibility(inputId) {
 
 async function loadProfile() {
     try {
-        const res = await fetch('/api/profile');
+        const res = await fetch(`${API_BASE}/api/profile`);
         const data = await res.json();
         if (data.structured) {
             document.getElementById('profile-name').innerText = data.structured.name;

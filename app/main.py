@@ -41,11 +41,22 @@ async def lifespan(app: FastAPI):
     logger.info("Stopping scheduler...")
     scheduler_instance.stop()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Khin Early Bird 101",
     description="Automated multi-source job extraction & AI qualification validation system for Khin Andrei Gamboa",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Enable CORS for VS Code Live Server (port 5500) and other origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Mount static files

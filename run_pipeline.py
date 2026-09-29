@@ -11,14 +11,14 @@ from app.database import init_db
 from app.pipeline.orchestrator import PipelineOrchestrator
 
 def main():
-    parser = argparse.ArgumentParser(description="Khin Early Bird 101 - Automated Extraction & Matching Pipeline")
+    parser = argparse.ArgumentParser(description="Khin Early Bird - Automated Extraction & Matching Pipeline")
     parser.add_argument("--limit", type=int, default=3, help="Max jobs per keyword search")
     parser.add_argument("--location", type=str, default="Philippines", help="Target job location")
     parser.add_argument("--no-email", action="store_true", help="Skip sending email digest")
     args = parser.parse_args()
 
     print("=" * 60)
-    print("  [+] KHIN EARLY BIRD 101 - PIPELINE CLI EXECUTION")
+    print("  [+] KHIN EARLY BIRD - PIPELINE CLI EXECUTION")
     print(f"  Target Location: {args.location} | Limit Per Keyword: {args.limit}")
     print(f"  Email Delivery: {'Disabled' if args.no_email else 'Enabled'}")
     print("=" * 60)

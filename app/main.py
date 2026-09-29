@@ -24,7 +24,7 @@ templates = Jinja2Templates(directory=str(PROJECT_ROOT / "app" / "web" / "templa
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup actions
-    logger.info("Initializing Khin Early Bird 101 database...")
+    logger.info("Initializing Khin Early Bird database...")
     init_db()
     
     logger.info("Starting background daily automation scheduler...")
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    title="Khin Early Bird 101",
+    title="Khin Early Bird",
     description="Automated multi-source job extraction & AI qualification validation system for Khin Andrei Gamboa",
     version="1.0.0",
     lifespan=lifespan

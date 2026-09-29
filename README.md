@@ -1,4 +1,4 @@
-# 🦅 Khin Early Bird 101
+# 🦅 Khin Early Bird
 
 **Automated Multi-Source Job Extraction, AI Qualification Validation & Daily Digest System**  
 Tailored specifically for **Khin Andrei Gamboa** (`gamboa.khinandrei@gmail.com`).
@@ -7,7 +7,7 @@ Tailored specifically for **Khin Andrei Gamboa** (`gamboa.khinandrei@gmail.com`)
 
 ## 🌟 Overview & Key Capabilities
 
-**Khin Early Bird 101** is an autonomous daily career opportunity intelligence system designed to:
+**Khin Early Bird** is an autonomous daily career opportunity intelligence system designed to:
 1. **Multi-Source Extraction**: Scrape and ingest live postings from **LinkedIn**, **Jobstreet Philippines**, and **Indeed Philippines**.
 2. **Schema Transformation & Strict Segregation**: Normalize raw HTML/JSON data, deduplicate records via SHA hashing, and clearly segregate **Internships / Trainee Programs** from **Regular / Entry-Level / Junior Roles**.
 3. **AI Qualification Validation**: Match every opportunity against Khin Andrei's 5 targeted resumes (Software Dev, Data, IT Support, QA, and Master CV) using **Google Gemini 2.5 Flash** (or built-in semantic rule matching).

@@ -11,7 +11,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  [+] KHIN EARLY BIRD 101 - AI JOB HUNT SYSTEM")
+    print("  [+] KHIN EARLY BIRD - AI JOB HUNT SYSTEM")
     print(f"  [+] Web Dashboard running at: http://{APP_HOST}:{APP_PORT}")
     print("  [+] Notifications: gamboa.khinandrei@gmail.com")
     print("=" * 60)

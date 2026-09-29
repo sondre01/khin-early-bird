@@ -1,4 +1,4 @@
-// Khin Early Bird 101 - Interactive Dashboard JS
+// Khin Early Bird - Interactive Dashboard JS
 
 // If opened via VS Code Live Server (port 5500), route API requests to the Python backend on 8000
 const API_BASE = (window.location.port === '5500' || window.location.port === '5501' || window.location.port === '5502') 

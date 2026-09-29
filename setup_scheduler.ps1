@@ -1,4 +1,4 @@
-# Khin Early Bird 101 - Windows Task Scheduler Setup
+# Khin Early Bird - Windows Task Scheduler Setup
 # Registers a daily background task to execute run_pipeline.py every morning
 
 param (
@@ -11,7 +11,7 @@ $ScriptPath = Join-Path $PSScriptRoot "run_pipeline.py"
 $WorkingDirectory = $PSScriptRoot
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  🦅 Setting up Khin Early Bird 101 Daily Schedule" -ForegroundColor Green
+Write-Host "  🦅 Setting up Khin Early Bird Daily Schedule" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "Task Name:        $TaskName"
 Write-Host "Daily Run Time:   $Time AM"

@@ -2,9 +2,9 @@ name: Daily Job Hunt & AI Evaluation
 
 on:
   schedule:
-    # 00:00 UTC = 08:00 AM Philippine Standard Time (PHT)
+    # Runs every day at 00:00 UTC = 08:00 AM Philippine Standard Time (PHT)
     - cron: '0 0 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI anytime
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
 
 permissions:
   contents: write
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,7 +45,7 @@ jobs:
 
       - name: Commit & Push Updated Database Snapshot
         run: |
-          git config --global user.name "Early Bird Bot"
-          git config --global user.email "bot@earlybird.internal"
-          git add data/early_bird.db data/latest_digest.html
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(data): automated daily job database update [skip ci]" && git push)
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/early_bird.db data/latest_digest.html
+          git diff --staged --quiet || (git commit -m "chore(data): automated daily job database update [skip ci]" && git push origin main)

@@ -2,6 +2,7 @@ import os
 import sqlite3
 import json
 import shutil
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -9,14 +10,68 @@ from app.config import DB_PATH, PROJECT_ROOT
 
 def get_connection() -> sqlite3.Connection:
     if os.getenv("VERCEL") and not DB_PATH.exists():
-        seed_db = PROJECT_ROOT / "data" / "early_bird.db"
-        if seed_db.exists():
-            shutil.copyfile(seed_db, DB_PATH)
+        possible_seeds = [
+            PROJECT_ROOT / "data" / "early_bird.db",
+            Path.cwd() / "data" / "early_bird.db",
+            Path("/var/task/data/early_bird.db"),
+        ]
+        for seed_db in possible_seeds:
+            if seed_db.exists():
+                try:
+                    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(seed_db, DB_PATH)
+                    break
+                except Exception:
+                    pass
 
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+    except Exception:
+        pass
     return conn
+
+def parse_posted_age_days(posted_str: Optional[str], extracted_at: Optional[str] = None) -> float:
+    """Computes posting age in days from human-relative strings or absolute timestamps."""
+    if not posted_str:
+        if extracted_at:
+            try:
+                dt = datetime.fromisoformat(extracted_at)
+                return max(0.0, (datetime.now() - dt).total_seconds() / 86400.0)
+            except Exception:
+                pass
+        return 999.0
+    s = str(posted_str).lower().strip()
+    if any(w in s for w in ('just', 'moment', 'second', 'min')):
+        return 0.05
+    if 'hour' in s:
+        m = re.search(r'(\d+)', s)
+        h = int(m.group(1)) if m else 1
+        return h / 24.0
+    if 'today' in s:
+        return 0.2
+    if 'yesterday' in s:
+        return 1.0
+    if 'day' in s:
+        m = re.search(r'(\d+)', s)
+        return float(m.group(1)) if m else 1.0
+    if 'week' in s:
+        m = re.search(r'(\d+)', s)
+        return float(m.group(1)) * 7.0 if m else 7.0
+    if 'month' in s:
+        m = re.search(r'(\d+)', s)
+        return float(m.group(1)) * 30.0 if m else 30.0
+    if 'year' in s:
+        m = re.search(r'(\d+)', s)
+        return float(m.group(1)) * 365.0 if m else 365.0
+    for fmt in ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S', '%d/%m/%Y', '%b %d, %Y'):
+        try:
+            dt = datetime.strptime(s[:10], fmt)
+            return max(0.0, (datetime.now() - dt).total_seconds() / 86400.0)
+        except Exception:
+            pass
+    return 999.0
 
 def init_db():
     conn = get_connection()
@@ -171,6 +226,7 @@ def get_jobs(
     search: Optional[str] = None,
     status: Optional[str] = None,
     hide_applied: bool = False,
+    posted_within: Optional[str] = None,
     sort_by: Optional[str] = "recent",
     limit: int = 500,
     offset: int = 0
@@ -227,17 +283,6 @@ def get_jobs(
         query += " AND (j.title LIKE ? OR j.company LIKE ? OR j.description LIKE ?)"
         params.extend([search_pattern, search_pattern, search_pattern])
         
-    # Sort order: Recent priority vs Match score
-    if sort_by == "score":
-        query += " ORDER BY COALESCE(e.match_score, 0) DESC, j.extracted_at DESC"
-    elif sort_by == "company":
-        query += " ORDER BY j.company ASC, j.extracted_at DESC"
-    else: # Default: recent
-        query += " ORDER BY j.extracted_at DESC, COALESCE(e.match_score, 0) DESC"
-        
-    query += " LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-    
     cursor.execute(query, params)
     rows = cursor.fetchall()
     
@@ -252,9 +297,46 @@ def get_jobs(
                     d[key] = [d[key]]
             else:
                 d[key] = []
+        d["posted_age_days"] = parse_posted_age_days(d.get("posted_date"), d.get("extracted_at"))
         results.append(d)
         
     conn.close()
+
+    # Recency filter (last 24 hours, last 3 days, last 7 days, etc.)
+    if posted_within and posted_within.lower() != 'all':
+        pw = posted_within.lower().strip()
+        max_days_map = {
+            '24h': 1.0,
+            '1d': 1.0,
+            '3d': 3.0,
+            '7d': 7.0,
+            '1w': 7.0,
+            '14d': 14.0,
+            '2w': 14.0,
+            '30d': 30.0,
+            '1m': 30.0
+        }
+        max_days = max_days_map.get(pw)
+        if max_days is not None:
+            results = [r for r in results if r["posted_age_days"] <= max_days]
+
+    # Dynamic sorting
+    if sort_by == "recent":
+        # Freshest posted jobs first (e.g. hours ago, Today, 1 day ago), then highest match score
+        results.sort(key=lambda x: (x["posted_age_days"], -(x.get("match_score") or 0)))
+    elif sort_by == "score":
+        results.sort(key=lambda x: -(x.get("match_score") or 0))
+    elif sort_by == "company":
+        results.sort(key=lambda x: (x.get("company") or "").lower())
+    else:
+        results.sort(key=lambda x: (x["posted_age_days"], -(x.get("match_score") or 0)))
+
+    # Apply offset and limit
+    if offset > 0:
+        results = results[offset:]
+    if limit is not None and limit > 0:
+        results = results[:limit]
+
     return results
 
 def get_job_by_id(job_id: str) -> Optional[Dict[str, Any]]:

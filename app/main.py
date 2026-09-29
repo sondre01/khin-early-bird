@@ -27,10 +27,11 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing Khin Early Bird database...")
     init_db()
     
-    logger.info("Starting background daily automation scheduler...")
-    scheduler_instance.start()
+    if not os.getenv("VERCEL"):
+        logger.info("Starting background daily automation scheduler...")
+        scheduler_instance.start()
     
-    if AUTO_RUN_ON_STARTUP:
+    if AUTO_RUN_ON_STARTUP and not os.getenv("VERCEL"):
         logger.info("AUTO_RUN_ON_STARTUP is enabled - triggering initial ingestion run...")
         orch = PipelineOrchestrator()
         orch.run(limit_per_keyword=2, send_email=False)
@@ -38,8 +39,9 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown actions
-    logger.info("Stopping scheduler...")
-    scheduler_instance.stop()
+    if not os.getenv("VERCEL"):
+        logger.info("Stopping scheduler...")
+        scheduler_instance.stop()
 
 from fastapi.middleware.cors import CORSMiddleware
 

@@ -58,6 +58,7 @@ async def api_jobs(
     search: Optional[str] = None,
     status: Optional[str] = None,
     hide_applied: bool = False,
+    posted_within: Optional[str] = None,
     sort_by: Optional[str] = "recent",
     limit: int = 500,
     offset: int = 0
@@ -70,11 +71,19 @@ async def api_jobs(
         search=search,
         status=status,
         hide_applied=hide_applied,
+        posted_within=posted_within,
         sort_by=sort_by,
         limit=limit,
         offset=offset
     )
     return {"jobs": jobs, "count": len(jobs)}
+
+@router.get("/api/cron")
+async def api_vercel_cron():
+    return {
+        "status": "ok",
+        "message": "Vercel cron ping received. Autonomous pipeline runs daily via GitHub Actions runner."
+    }
 
 @router.get("/api/jobs/{job_id}")
 async def api_job_detail(job_id: str):

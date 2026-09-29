@@ -360,6 +360,19 @@
                         <span class="text-xs font-semibold text-slate-700">Hide Applied</span>
                     </label>
 
+                    <!-- Date Posted Recency Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="font-semibold text-slate-600">Posted:</label>
+                        <select id="filter-posted" onchange="fetchJobs()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="all">Anytime</option>
+                            <option value="24h">⚡ Last 24 Hours</option>
+                            <option value="3d">✨ Last 3 Days</option>
+                            <option value="7d">📅 Last 7 Days</option>
+                            <option value="14d">Last 14 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
+                    </div>
+
                     <!-- Sort By Priority Filter -->
                     <div class="flex items-center space-x-1">
                         <label class="font-semibold text-slate-600">Sort By:</label>
@@ -745,8 +758,14 @@
                         <span id="modal-category" class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">Role Category</span>
                     </div>
                     <h3 id="modal-title" class="text-lg font-black text-slate-900">Job Title</h3>
-                    <p class="text-xs text-slate-600">
-                        🏢 <strong id="modal-company">Company</strong> &bull; 📍 <span id="modal-location">Location</span> &bull; 💼 <span id="modal-work-type">Remote</span>
+                    <p class="text-xs text-slate-600 flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span>🏢 <strong id="modal-company">Company</strong></span>
+                        <span>&bull;</span>
+                        <span>📍 <span id="modal-location">Location</span></span>
+                        <span>&bull;</span>
+                        <span>💼 <span id="modal-work-type">Remote</span></span>
+                        <span>&bull;</span>
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[11px]">🕒 Posted: <span id="modal-posted-date">Today</span></span>
                     </p>
                 </div>
                 <button onclick="closeJobModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">

@@ -353,6 +353,16 @@
                         </select>
                     </div>
 
+                    <!-- Sort By Priority Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="font-semibold text-slate-600">Sort By:</label>
+                        <select id="filter-sort" onchange="fetchJobs()" class="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-2.5 py-1.5 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="recent">📅 Newest First (Priority)</option>
+                            <option value="score">🌟 Highest Match Score</option>
+                            <option value="company">🏢 Company (A-Z)</option>
+                        </select>
+                    </div>
+
                     <button onclick="resetFilters()" class="text-slate-400 hover:text-slate-600 ml-auto flex items-center space-x-1">
                         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                         <span>Reset Filters</span>

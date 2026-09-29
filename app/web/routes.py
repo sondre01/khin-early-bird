@@ -57,7 +57,8 @@ async def api_jobs(
     min_score: Optional[int] = None,
     search: Optional[str] = None,
     status: Optional[str] = None,
-    limit: int = 50,
+    sort_by: Optional[str] = "recent",
+    limit: int = 500,
     offset: int = 0
 ):
     jobs = get_jobs(
@@ -67,6 +68,7 @@ async def api_jobs(
         min_score=min_score,
         search=search,
         status=status,
+        sort_by=sort_by,
         limit=limit,
         offset=offset
     )

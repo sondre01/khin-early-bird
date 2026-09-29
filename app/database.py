@@ -170,7 +170,8 @@ def get_jobs(
     min_score: Optional[int] = None,
     search: Optional[str] = None,
     status: Optional[str] = None,
-    limit: int = 100,
+    sort_by: Optional[str] = "recent",
+    limit: int = 500,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
     conn = get_connection()
@@ -217,7 +218,15 @@ def get_jobs(
         query += " AND (j.title LIKE ? OR j.company LIKE ? OR j.description LIKE ?)"
         params.extend([search_pattern, search_pattern, search_pattern])
         
-    query += " ORDER BY COALESCE(e.match_score, 0) DESC, j.extracted_at DESC LIMIT ? OFFSET ?"
+    # Sort order: Recent priority vs Match score
+    if sort_by == "score":
+        query += " ORDER BY COALESCE(e.match_score, 0) DESC, j.extracted_at DESC"
+    elif sort_by == "company":
+        query += " ORDER BY j.company ASC, j.extracted_at DESC"
+    else: # Default: recent
+        query += " ORDER BY j.extracted_at DESC, COALESCE(e.match_score, 0) DESC"
+        
+    query += " LIMIT ? OFFSET ?"
     params.extend([limit, offset])
     
     cursor.execute(query, params)

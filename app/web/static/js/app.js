@@ -122,9 +122,10 @@ async function fetchJobs() {
     const source = document.getElementById('filter-source').value;
     const score = document.getElementById('filter-score').value;
     const status = document.getElementById('filter-status').value;
+    const sortBy = document.getElementById('filter-sort') ? document.getElementById('filter-sort').value : 'recent';
     const search = document.getElementById('search-input').value.trim();
 
-    let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}`;
+    let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}&sort_by=${encodeURIComponent(sortBy)}`;
     if (category !== 'all') url += `&role_category=${encodeURIComponent(category)}`;
     if (source !== 'all') url += `&source=${encodeURIComponent(source)}`;
     if (parseInt(score) > 0) url += `&min_score=${encodeURIComponent(score)}`;
@@ -256,6 +257,7 @@ function resetFilters() {
     document.getElementById('filter-source').value = 'all';
     document.getElementById('filter-score').value = '0';
     document.getElementById('filter-status').value = 'all';
+    if (document.getElementById('filter-sort')) document.getElementById('filter-sort').value = 'recent';
     document.getElementById('search-input').value = '';
     setJobTypeFilter('all');
 }

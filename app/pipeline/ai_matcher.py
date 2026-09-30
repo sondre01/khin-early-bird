@@ -7,6 +7,7 @@ from collections import Counter
 from typing import Dict, Any, List, Optional
 from app.config import GEMINI_API_KEY
 from app.profile_loader import get_candidate_profile_context, STRUCTURED_PROFILE
+from app.utils.experience import is_fresh_grad_acceptable
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,11 @@ JOB DETAILS:
 
 EVALUATION GOAL:
 Validate whether this opportunity matches Khin's technical qualifications, skills (Python, SQL, React, IT Admin, Data Engineering/Analytics, QA), and educational background (BS Computer Engineering, Dean's List, graduating July 2026).
-Reject roles with extreme seniority requirements (5-10+ years) or non-technical domains.
+
+STRICT EXPERIENCE & SENIORITY CONSTRAINT:
+Khin Andrei Gamboa is a FRESH GRADUATE with ZERO (0) full-time work experience (only student capstones, personal projects, and a 6-month internship).
+- For REGULAR jobs: You MUST REJECT roles that require prior professional full-time experience (e.g., 2+, 3+, 5+ years) or Senior/Mid-level titles.
+- ONLY APPROVE regular roles that explicitly accept fresh graduates, entry-level candidates, 0-1 year experience, or where fresh grads are welcome.
 
 Return ONLY a valid JSON object matching this schema:
 {{
@@ -92,11 +97,17 @@ Return ONLY a valid JSON object matching this schema:
         if job_type == "Internship":
             score += 10
             reasons.append("Academic status aligns with graduating Computer Engineering Dean's List candidate.")
-        elif any(k in title for k in ["junior", "associate", "entry", "intern", "trainee"]):
-            score += 10
-            reasons.append("Entry-level seniority tier directly aligns with Khin's career stage.")
-        elif any(k in title for k in ["senior", "lead", "principal", "manager"]):
-            score -= 25
+        else:
+            is_fg_ok, fg_reason, is_explicit_fg = is_fresh_grad_acceptable(title, job.get("description", ""), job_type)
+            if not is_fg_ok:
+                score -= 45
+                reasons.append(f"Ineligible for fresh graduate: {fg_reason}")
+            elif is_explicit_fg:
+                score += 15
+                reasons.append("Role explicitly accepts fresh graduates / 0 work experience.")
+            elif any(k in title for k in ["junior", "associate", "entry", "trainee"]):
+                score += 10
+                reasons.append("Entry-level seniority tier directly aligns with Khin's career stage.")
 
         if role_cat in ["software_engineering", "web_development"]:
             reasons.append("Matches Khin's Python, React.js, and Full-Stack web portfolio.")
@@ -255,30 +266,21 @@ class PreferenceGatekeeperValidator:
                 hard_rejected = True
                 break
 
-        # 2. Seniority & Experience Constraint
-        exp_matches = re.findall(r"(\d+)\+?\s*(?:-\s*\d+)?\s*(?:years?|yrs?)(?:\s+of)?\s+experience", full_text)
-        if exp_matches:
-            years = [int(y) for y in exp_matches if y.isdigit()]
-            if years:
-                max_req = max(years)
-                if max_req >= 7:
-                    red_flags.append(f"Excessive experience demanded: {max_req}+ years (Candidate graduated July 2026)")
-                    score -= 35
-                    hard_rejected = True
-                elif max_req >= 5:
-                    red_flags.append(f"High experience threshold: {max_req}+ years")
-                    score -= 20
-                elif max_req <= 2:
-                    checks_passed.append(f"Experience expectation ({max_req} yr) matches entry-level profile.")
-                    score += 10
-
-        # Title Seniority Check
-        if any(w in title for w in ["junior", "associate", "entry", "intern", "trainee", "graduate", "fresh", "level 1", "l1"]):
+        # 2. Seniority & Experience Constraint (Strict Fresh Graduate & 0 Experience Rule)
+        is_fg_ok, exp_reason, is_explicit_fg = is_fresh_grad_acceptable(title, desc, job_type)
+        if not is_fg_ok:
+            red_flags.append(f"Ineligible for Fresh Graduate (0 Exp): {exp_reason}")
+            score -= 50
+            hard_rejected = True
+        elif is_explicit_fg:
+            checks_passed.append(f"🎓 Fresh Graduate & 0 Exp: {exp_reason}")
+            score += 20
+        elif any(w in title for w in ["junior", "associate", "entry", "intern", "trainee"]):
             checks_passed.append("Title explicitly targets Junior/Associate/Intern tier.")
             score += 15
-        elif any(w in title for w in ["senior", "sr.", "lead", "principal", "manager", "director", "architect"]):
-            red_flags.append("Title indicates Senior, Lead, or Leadership rank.")
-            score -= 25
+        else:
+            checks_passed.append("Entry-level seniority tier matches profile.")
+            score += 5
 
         # 3. Domain Fit
         if role_cat in self.ALLOWED_DOMAINS:

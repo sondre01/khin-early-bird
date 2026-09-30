@@ -39,6 +39,8 @@ jobs:
           SMTP_USER: gamboa.khinandrei@gmail.com
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           USER_EMAIL: gamboa.khinandrei@gmail.com
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           EMAIL_NOTIFICATIONS_ENABLED: "true"
           FILTER_NCR_ONLY: "true"
           DEFAULT_TARGET_LOCATION: "Metro Manila, Philippines"

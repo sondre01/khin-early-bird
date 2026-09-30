@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from app.database import get_jobs, get_job_by_id, update_job_status, get_stats
+from app.database import get_jobs, get_job_by_id, update_job_status, get_stats, purge_ineligible_jobs
 from app.config import (
     USER_NAME, USER_EMAIL, USER_PHONE, USER_LOCATION,
     DAILY_RUN_TIME, EMAIL_NOTIFICATIONS_ENABLED, GEMINI_API_KEY,
@@ -34,12 +34,16 @@ active_pipeline_state = {
     "logs": []
 }
 
+from app.supabase_client import is_supabase_configured, sync_sqlite_to_supabase
+
 class SettingsUpdate(BaseModel):
     gemini_api_key: Optional[str] = None
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     email_notifications_enabled: Optional[bool] = None
     daily_run_time: Optional[str] = None
+    supabase_url: Optional[str] = None
+    supabase_key: Optional[str] = None
 
 class StatusUpdate(BaseModel):
     status: str
@@ -88,6 +92,32 @@ async def api_vercel_cron():
     return {
         "status": "ok",
         "message": "Vercel cron ping received. Autonomous pipeline runs daily via GitHub Actions runner."
+    }
+
+@router.post("/api/jobs/verify-links")
+@router.get("/api/jobs/verify-links")
+async def api_verify_links():
+    """Audits all active jobs in the database, removes dead/expired application links, and returns results."""
+    result = prune_dead_jobs()
+    return {
+        "success": True,
+        "checked": result["checked"],
+        "removed": result["removed"],
+        "active": result["active"],
+        "message": f"Verified {result['checked']} links. Removed {result['removed']} dead/expired listings. {result['active']} active jobs remain."
+    }
+
+@router.post("/api/jobs/purge-senior")
+@router.get("/api/jobs/purge-senior")
+async def api_purge_senior():
+    """Audits active database listings and dismisses roles requiring 2+ years of experience or senior rank."""
+    result = purge_ineligible_jobs()
+    return {
+        "success": True,
+        "scanned": result["total_scanned"],
+        "purged": result["purged_count"],
+        "purged_jobs": result["purged_jobs"],
+        "message": f"Purged {result['purged_count']} non-entry/senior roles from database. {result['total_scanned'] - result['purged_count']} fresh-grad compliant jobs remain."
     }
 
 @router.get("/api/jobs/{job_id}")
@@ -257,7 +287,10 @@ async def api_get_settings():
         "smtp_port": SMTP_PORT,
         "smtp_user": os.getenv("SMTP_USER", SMTP_USER),
         "target_categories": TARGET_CATEGORIES,
-        "job_types": JOB_TYPES
+        "job_types": JOB_TYPES,
+        "is_supabase_configured": is_supabase_configured(),
+        "supabase_url": os.getenv("SUPABASE_URL", ""),
+        "has_supabase_key": bool(os.getenv("SUPABASE_KEY", "").strip() or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip())
     }
 
 @router.post("/api/settings")
@@ -273,8 +306,19 @@ async def api_save_settings(settings: SettingsUpdate):
     if settings.daily_run_time is not None:
         update_env_variable("DAILY_RUN_TIME", settings.daily_run_time.strip())
         scheduler_instance.update_schedule(settings.daily_run_time.strip())
+    if settings.supabase_url is not None:
+        update_env_variable("SUPABASE_URL", settings.supabase_url.strip())
+    if settings.supabase_key is not None:
+        update_env_variable("SUPABASE_KEY", settings.supabase_key.strip())
         
     return {"success": True, "message": "Settings updated successfully"}
+
+@router.post("/api/supabase/sync")
+@router.get("/api/supabase/sync")
+async def api_supabase_sync():
+    """Syncs existing SQLite jobs and evaluations into Supabase cloud database."""
+    res = sync_sqlite_to_supabase()
+    return res
 
 @router.post("/api/email/test")
 async def api_test_email():
@@ -296,18 +340,6 @@ async def api_preview_digest():
     html = notifier.generate_html_digest(jobs)
     return HTMLResponse(content=html)
 
-@router.post("/api/jobs/verify-links")
-@router.get("/api/jobs/verify-links")
-async def api_verify_links():
-    """Audits all active jobs in the database, removes dead/expired application links, and returns results."""
-    result = prune_dead_jobs()
-    return {
-        "success": True,
-        "checked": result["checked"],
-        "removed": result["removed"],
-        "active": result["active"],
-        "message": f"Verified {result['checked']} links. Removed {result['removed']} dead/expired listings. {result['active']} active jobs remain."
-    }
 
 @router.get("/api/profile")
 async def api_candidate_profile():

@@ -40,61 +40,64 @@ EMAIL_NOTIFICATIONS_ENABLED = os.getenv("EMAIL_NOTIFICATIONS_ENABLED", "false").
 DAILY_RUN_TIME = os.getenv("DAILY_RUN_TIME", "08:00")
 AUTO_RUN_ON_STARTUP = os.getenv("AUTO_RUN_ON_STARTUP", "false").lower() in ("1", "true", "yes")
 
-# Web Server
+# Web Server & Cloud Database
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://khin-early-bird.vercel.app").rstrip("/")
 DB_PATH = DATA_DIR / "early_bird.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "") or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # Role Categories & Target Search Keywords
 TARGET_CATEGORIES = {
     "software_engineering": {
         "label": "Software Engineering",
         "keywords": [
-            "Junior Software Engineer", "Associate Software Engineer", "Software Engineer",
-            "Python Developer", "Full Stack Developer", "Backend Engineer"
+            "Junior Software Engineer", "Associate Software Engineer", "Fresh Graduate Software Engineer",
+            "Junior Python Developer", "Entry Level Developer", "Junior Backend Engineer"
         ]
     },
     "web_development": {
         "label": "Web Development",
         "keywords": [
-            "Web Developer", "Frontend Developer", "React Developer",
-            "Junior Web Developer", "JavaScript Developer"
+            "Junior Web Developer", "Associate Web Developer", "Junior Frontend Developer",
+            "Entry Level React Developer", "Junior JavaScript Developer"
         ]
     },
     "it_tech_support": {
         "label": "IT Tech Support & Operations",
         "keywords": [
-            "IT Tech Support", "IT Support Specialist", "IT Administrator",
-            "Helpdesk Technician", "Desktop Support", "Technical Support Representative"
+            "Junior IT Support", "Associate IT Specialist", "IT Helpdesk Entry Level",
+            "Desktop Support Junior", "Junior IT Administrator", "Technical Support Representative"
         ]
     },
     "data_analytics": {
         "label": "Data Analytics",
         "keywords": [
-            "Data Analyst", "Junior Data Analyst", "Associate Data Analyst",
-            "BI Analyst", "Business Intelligence Analyst"
+            "Junior Data Analyst", "Associate Data Analyst", "Entry Level Data Analyst",
+            "Data Analyst Fresh Graduate", "Junior BI Analyst"
         ]
     },
     "data_engineering": {
         "label": "Data Engineering",
         "keywords": [
-            "Data Engineer", "Junior Data Engineer", "Associate Data Engineer",
-            "ETL Developer", "Data Pipeline Engineer"
+            "Junior Data Engineer", "Associate Data Engineer", "Entry Level Data Engineer",
+            "Data Engineer Fresh Graduate", "Junior ETL Developer"
         ]
     },
     "data_science": {
         "label": "Data Science & AI",
         "keywords": [
-            "Junior Data Scientist", "Data Scientist", "Machine Learning Engineer",
-            "AI Engineer", "Computer Vision Intern"
+            "Junior Data Scientist", "Associate Data Scientist", "Entry Level AI Engineer",
+            "Machine Learning Junior", "Computer Vision Intern"
         ]
     },
     "qa_testing": {
         "label": "QA & Software Testing",
         "keywords": [
-            "QA Engineer", "Quality Assurance Analyst", "Software QA Tester",
-            "Junior QA Engineer", "Manual Tester"
+            "Junior QA Engineer", "Associate QA Analyst", "Software QA Tester Junior",
+            "Entry Level QA", "Manual QA Tester Fresh Graduate"
         ]
     }
 }

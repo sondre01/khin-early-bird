@@ -8,6 +8,20 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.config import DB_PATH, PROJECT_ROOT
 from app.utils.location import is_ncr_location
+from app.utils.experience import is_fresh_grad_acceptable
+from app.supabase_client import (
+    is_supabase_configured,
+    supabase_save_job,
+    supabase_save_evaluation,
+    supabase_get_jobs,
+    supabase_get_job_by_id,
+    supabase_update_job_status,
+    supabase_get_stats,
+    supabase_start_scrape_run,
+    supabase_finish_scrape_run,
+    supabase_purge_ineligible_jobs,
+    sync_sqlite_to_supabase
+)
 
 def get_connection() -> sqlite3.Connection:
     if os.getenv("VERCEL") and not DB_PATH.exists():
@@ -75,6 +89,13 @@ def parse_posted_age_days(posted_str: Optional[str], extracted_at: Optional[str]
     return 999.0
     
 def init_db():
+    if is_supabase_configured():
+        try:
+            purge_ineligible_jobs()
+        except Exception:
+            pass
+        return
+
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -156,9 +177,17 @@ def init_db():
     
     conn.commit()
     conn.close()
+    
+    try:
+        purge_ineligible_jobs()
+    except Exception:
+        pass
 
 def save_job(job: Dict[str, Any]) -> bool:
     """Inserts a job if not exists. Returns True if newly inserted, False if already existed."""
+    if is_supabase_configured():
+        return supabase_save_job(job)
+
     conn = get_connection()
     cursor = conn.cursor()
     now = datetime.now().isoformat()
@@ -203,6 +232,9 @@ def save_job(job: Dict[str, Any]) -> bool:
 
 def save_evaluation(evaluation: Dict[str, Any]):
     """Saves AI & Multi-Validator match evaluation for a job"""
+    if is_supabase_configured():
+        return supabase_save_evaluation(evaluation)
+
     conn = get_connection()
     cursor = conn.cursor()
     now = datetime.now().isoformat()
@@ -263,6 +295,23 @@ def get_jobs(
     limit: int = 500,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
+    if is_supabase_configured():
+        return supabase_get_jobs(
+            job_type=job_type,
+            role_category=role_category,
+            source=source,
+            min_score=min_score,
+            min_validators=min_validators,
+            search=search,
+            status=status,
+            hide_applied=hide_applied,
+            posted_within=posted_within,
+            sort_by=sort_by,
+            location_filter=location_filter,
+            limit=limit,
+            offset=offset
+        )
+
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -316,6 +365,9 @@ def get_jobs(
         # Default: Hide dismissed/cancelled jobs
         query += " AND (j.status IS NULL OR j.status != 'dismissed')"
         
+    # Default: Filter out ineligible / hard-rejected jobs (e.g. senior roles or excessive experience)
+    query += " AND (e.is_applicable IS NULL OR e.is_applicable = 1)"
+        
     if hide_applied:
         query += " AND (j.status IS NULL OR j.status != 'applied')"
         
@@ -346,6 +398,15 @@ def get_jobs(
         else:
             d["validator_details"] = {}
         d["posted_age_days"] = parse_posted_age_days(d.get("posted_date"), d.get("extracted_at"))
+
+        # Fresh graduate & 0-experience classification tags
+        is_fg_ok, fg_reason, is_exp_fg = is_fresh_grad_acceptable(
+            d.get("title", ""), d.get("description", ""), d.get("job_type", "Regular")
+        )
+        d["is_fresh_grad_acceptable"] = is_fg_ok
+        d["fresh_grad_reason"] = fg_reason
+        d["is_explicit_fresh_grad"] = is_exp_fg
+
         results.append(d)
         
     conn.close()
@@ -399,6 +460,9 @@ def get_jobs(
     return results
 
 def get_job_by_id(job_id: str) -> Optional[Dict[str, Any]]:
+    if is_supabase_configured():
+        return supabase_get_job_by_id(job_id)
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -443,6 +507,9 @@ def get_job_by_id(job_id: str) -> Optional[Dict[str, Any]]:
     return d
 
 def update_job_status(job_id: str, status: str):
+    if is_supabase_configured():
+        return supabase_update_job_status(job_id, status)
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
@@ -450,22 +517,33 @@ def update_job_status(job_id: str, status: str):
     conn.close()
 
 def get_stats() -> Dict[str, Any]:
+    if is_supabase_configured():
+        return supabase_get_stats()
+
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT COUNT(*) FROM jobs")
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE (status IS NULL OR status != 'dismissed')")
     total_jobs = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM jobs WHERE LOWER(job_type) = 'internship'")
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE LOWER(job_type) = 'internship' AND (status IS NULL OR status != 'dismissed')")
     internships = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM jobs WHERE LOWER(job_type) = 'regular'")
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE LOWER(job_type) = 'regular' AND (status IS NULL OR status != 'dismissed')")
     regular_jobs = cursor.fetchone()[0]
     
-    cursor.execute("SELECT COUNT(*) FROM evaluations WHERE match_score >= 80")
+    cursor.execute("""
+    SELECT COUNT(*) FROM evaluations e
+    JOIN jobs j ON e.job_id = j.id
+    WHERE e.match_score >= 80 AND (j.status IS NULL OR j.status != 'dismissed')
+    """)
     high_match_jobs = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM evaluations WHERE validators_passed = 3")
+    cursor.execute("""
+    SELECT COUNT(*) FROM evaluations e
+    JOIN jobs j ON e.job_id = j.id
+    WHERE e.validators_passed = 3 AND (j.status IS NULL OR j.status != 'dismissed')
+    """)
     triple_verified_jobs = cursor.fetchone()[0]
     
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE status = 'applied'")
@@ -478,6 +556,7 @@ def get_stats() -> Dict[str, Any]:
     cursor.execute("""
     SELECT role_category, COUNT(*) as count 
     FROM jobs 
+    WHERE (status IS NULL OR status != 'dismissed')
     GROUP BY role_category
     ORDER BY count DESC
     """)
@@ -487,6 +566,7 @@ def get_stats() -> Dict[str, Any]:
     cursor.execute("""
     SELECT source, COUNT(*) as count 
     FROM jobs 
+    WHERE (status IS NULL OR status != 'dismissed')
     GROUP BY source
     ORDER BY count DESC
     """)
@@ -513,6 +593,9 @@ def get_stats() -> Dict[str, Any]:
     }
 
 def start_scrape_run() -> int:
+    if is_supabase_configured():
+        return supabase_start_scrape_run()
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -525,6 +608,9 @@ def start_scrape_run() -> int:
     return run_id
 
 def finish_scrape_run(run_id: int, total_scraped: int, total_new: int, total_high_match: int, status: str = "completed", log: str = ""):
+    if is_supabase_configured():
+        return supabase_finish_scrape_run(run_id, total_scraped, total_new, total_high_match, status, log)
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -534,3 +620,44 @@ def finish_scrape_run(run_id: int, total_scraped: int, total_new: int, total_hig
     """, (datetime.now().isoformat(), total_scraped, total_new, total_high_match, status, log, run_id))
     conn.commit()
     conn.close()
+
+def purge_ineligible_jobs() -> Dict[str, Any]:
+    """
+    Finds and dismisses/purges all existing jobs in the database that are Senior,
+    require 2+ years of experience, or are not suitable for a fresh graduate with 0 experience.
+    """
+    if is_supabase_configured():
+        return supabase_purge_ineligible_jobs()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, company, job_type, description FROM jobs WHERE status IS NULL OR status != 'dismissed'")
+    rows = cursor.fetchall()
+    
+    purged = []
+    for row in rows:
+        job_id = row["id"]
+        title = row["title"]
+        company = row["company"]
+        job_type = row["job_type"]
+        description = row["description"]
+        
+        is_ok, reason, _ = is_fresh_grad_acceptable(title, description, job_type)
+        if not is_ok:
+            cursor.execute("UPDATE jobs SET status = 'dismissed' WHERE id = ?", (job_id,))
+            cursor.execute("UPDATE evaluations SET is_applicable = 0 WHERE job_id = ?", (job_id,))
+            purged.append({
+                "id": job_id,
+                "title": title,
+                "company": company,
+                "reason": reason
+            })
+            
+    conn.commit()
+    conn.close()
+    return {
+        "total_scanned": len(rows),
+        "purged_count": len(purged),
+        "purged_jobs": purged
+    }
+

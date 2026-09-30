@@ -78,6 +78,7 @@ class PipelineOrchestrator:
             normalized_jobs = []
             new_jobs_count = 0
             dead_links_rejected = 0
+            experience_rejected = 0
 
             for i, raw_item in enumerate(raw_jobs):
                 cleaned = self.normalizer.normalize(raw_item)
@@ -96,6 +97,12 @@ class PipelineOrchestrator:
                     logger.info(f"Discarded stale posting ({cleaned.get('posted_date')}): {cleaned['title']} @ {cleaned['company']}")
                     continue
 
+                # Experience & Seniority Guard: Discard roles demanding seniority or prior full-time experience for Regular jobs
+                if cleaned.get("job_type") == "Regular" and not cleaned.get("is_fresh_grad_acceptable", True):
+                    experience_rejected += 1
+                    logger.info(f"Discarded non-fresh-graduate posting ({cleaned.get('fresh_grad_reason')}): {cleaned['title']} @ {cleaned['company']}")
+                    continue
+
                 # Location Guard: Ensure opportunities are in NCR / Metro Manila or Remote
                 if FILTER_NCR_ONLY and not is_ncr_location(cleaned.get("location"), cleaned.get("work_type")):
                     logger.info(f"Discarded non-NCR posting ({cleaned.get('location')}): {cleaned['title']} @ {cleaned['company']}")
@@ -106,7 +113,7 @@ class PipelineOrchestrator:
                     new_jobs_count += 1
                 normalized_jobs.append(cleaned)
                 
-            emit(2, "Transformation", f"Transformation complete. {len(normalized_jobs)} live jobs verified ({dead_links_rejected} dead links rejected, {new_jobs_count} new entries saved).", 55)
+            emit(2, "Transformation", f"Transformation complete. {len(normalized_jobs)} live jobs verified ({dead_links_rejected} dead links rejected, {experience_rejected} senior/ineligible roles filtered, {new_jobs_count} new entries saved).", 55)
 
             # ==========================================
             # PHASE 3: AI VALIDATION & MATCHING

@@ -3,6 +3,8 @@ from typing import Dict, Any
 from app.scrapers.base import JobItem
 from app.utils.url_resolver import resolve_apply_url
 
+from app.utils.experience import is_fresh_grad_acceptable
+
 class JobNormalizer:
     @staticmethod
     def normalize(job: JobItem) -> Dict[str, Any]:
@@ -35,6 +37,12 @@ class JobNormalizer:
         
         d["job_type"] = "Internship" if is_internship else "Regular"
         
+        # Fresh graduate & 0-experience evaluation
+        is_acceptable, fg_reason, is_explicit_fg = is_fresh_grad_acceptable(title, d.get("description", ""), d["job_type"])
+        d["is_fresh_grad_acceptable"] = is_acceptable
+        d["fresh_grad_reason"] = fg_reason
+        d["is_explicit_fresh_grad"] = is_explicit_fg
+
         # Work type classification
         combined_text = f"{title} {location} {d.get('description', '')}".lower()
         if "remote" in combined_text or "work from home" in combined_text or "wfh" in combined_text:

@@ -288,7 +288,7 @@
                                 <span>🎓 Internships & Trainees</span>
                             </button>
                             <button onclick="setJobTypeFilter('Regular')" id="btn-seg-regular" class="seg-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
-                                <span>💼 Regular & Entry-Level</span>
+                                <span>💼 Regular (0 Exp / Fresh Grad)</span>
                             </button>
                         </div>
                     </div>
@@ -740,6 +740,43 @@
                                 <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                                 <span>View Latest HTML Digest</span>
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Full Width: Cloud Database (Supabase) -->
+                    <div class="col-span-1 md:col-span-2 border-t border-zinc-800/80 pt-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                                <i data-lucide="database" class="w-4 h-4 text-zinc-400"></i>
+                                <span>Supabase Cloud Database (Real-Time Ingestion & Vercel Persistence)</span>
+                            </h3>
+                            <span id="supabase-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-zinc-900 text-zinc-400 border-zinc-800">
+                                Checking...
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium text-zinc-300">Supabase Project URL</label>
+                                <input type="text" id="input-supabase-url" placeholder="https://xxxxxxxx.supabase.co" class="w-full text-xs font-mono px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium text-zinc-300">Supabase API Key (Anon or Service Role)</label>
+                                <div class="relative">
+                                    <input type="password" id="input-supabase-key" placeholder="eyJhbGciOi..." class="w-full text-xs font-mono px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500">
+                                    <button type="button" onclick="togglePasswordVisibility('input-supabase-key')" class="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-200">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3 pt-1">
+                            <button type="button" onclick="syncLocalToSupabase()" id="btn-sync-supabase" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-medium px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5">
+                                <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+                                <span>Sync Local Jobs to Supabase Cloud</span>
+                            </button>
+                            <span id="supabase-sync-msg" class="text-xs text-zinc-400"></span>
                         </div>
                     </div>
                 </div>

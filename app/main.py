@@ -65,6 +65,7 @@ app.add_middleware(
 static_dir = PROJECT_ROOT / "app" / "web" / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+app.mount("/app/web/static", StaticFiles(directory=str(static_dir)), name="app_web_static")
 
 # Include API & Web routes
 app.include_router(web_router)

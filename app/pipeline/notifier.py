@@ -55,13 +55,18 @@ class EmailNotifier:
                 
             role_label = j.get("role_category", "software_engineering").replace("_", " ").title()
 
+            fg_badge = ""
+            if j.get("job_type") == "Internship" or j.get("is_explicit_fresh_grad"):
+                fg_badge = '<span style="display:inline-block;background:#F0FDF4;color:#166534;border:1px solid #BBF7D0;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:4px;">🎓 Fresh Grad / 0 Exp</span>'
+
             return f"""
             <div style="background:#FFFFFF;border:1px solid #E4E4E7;border-radius:8px;padding:16px;margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                     <div>
                         <div style="margin-bottom:4px;">
                             <span style="display:inline-block;background:#F4F4F5;color:#18181B;border:1px solid #E4E4E7;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;margin-right:4px;">{j.get('source')}</span>
-                            <span style="display:inline-block;background:#FAFAFA;color:#52525B;border:1px solid #E4E4E7;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;">{role_label}</span>
+                            <span style="display:inline-block;background:#FAFAFA;color:#52525B;border:1px solid #E4E4E7;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;margin-right:4px;">{role_label}</span>
+                            {fg_badge}
                         </div>
                         <h3 style="margin:4px 0 3px 0;font-size:15px;color:#09090B;font-weight:700;letter-spacing:-0.2px;">{j.get('title')}</h3>
                         <p style="margin:0;font-size:12px;color:#71717A;">{j.get('company')} &bull; {j.get('location')} ({j.get('work_type')})</p>

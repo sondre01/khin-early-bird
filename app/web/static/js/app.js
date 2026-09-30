@@ -220,6 +220,10 @@ function renderJobCard(job) {
         ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400 border border-zinc-800">Internship</span>`
         : `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-200 border border-zinc-700/80">Regular</span>`;
 
+    const freshGradBadge = (job.is_explicit_fresh_grad || isIntern)
+        ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/70 text-emerald-300 border border-emerald-800/80">🎓 0 Exp / Fresh Grad</span>`
+        : `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400 border border-zinc-800">Entry Tier</span>`;
+
     const roleName = (job.role_category || '').replace('_', ' ').toUpperCase();
 
     const skills = (job.matched_skills || []).slice(0, 3).map(s => 
@@ -247,6 +251,7 @@ function renderJobCard(job) {
                 <div class="flex flex-wrap items-center gap-1.5">
                     <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800/80 text-zinc-300 border border-zinc-700/60">${job.source}</span>
                     ${typeBadge}
+                    ${freshGradBadge}
                     <span class="px-2 py-0.5 rounded text-[10px] font-medium text-zinc-400 border border-zinc-800">${roleName}</span>
                     ${consensusBadge}
                     ${statusBadge}
@@ -648,6 +653,27 @@ async function loadSettings() {
         if (data.has_smtp_password) {
             document.getElementById('input-smtp-password').placeholder = '●●●●●●●●●●●●●●●● (Configured)';
         }
+
+        // Supabase Settings & Status
+        const supabaseUrlInput = document.getElementById('input-supabase-url');
+        if (supabaseUrlInput && data.supabase_url) {
+            supabaseUrlInput.value = data.supabase_url;
+        }
+        const supabaseKeyInput = document.getElementById('input-supabase-key');
+        if (supabaseKeyInput && data.has_supabase_key) {
+            supabaseKeyInput.placeholder = '●●●●●●●●●●●●●●●● (Configured)';
+        }
+
+        const supabaseBadge = document.getElementById('supabase-status-badge');
+        if (supabaseBadge) {
+            if (data.is_supabase_configured) {
+                supabaseBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-emerald-950/60 text-emerald-400 border-emerald-800/80';
+                supabaseBadge.innerText = '● Connected';
+            } else {
+                supabaseBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-zinc-900 text-zinc-400 border-zinc-800';
+                supabaseBadge.innerText = '○ Offline (SQLite)';
+            }
+        }
     } catch (e) {
         console.error('Error loading settings:', e);
     }
@@ -657,6 +683,8 @@ async function saveSettings() {
     const geminiKey = document.getElementById('input-gemini-key').value.trim();
     const smtpPass = document.getElementById('input-smtp-password').value.trim();
     const scheduleTime = document.getElementById('input-schedule-time').value.trim();
+    const supabaseUrl = document.getElementById('input-supabase-url')?.value.trim();
+    const supabaseKey = document.getElementById('input-supabase-key')?.value.trim();
     const statusMsg = document.getElementById('settings-status-msg');
 
     statusMsg.innerText = 'Saving configuration...';
@@ -665,6 +693,8 @@ async function saveSettings() {
     if (geminiKey) payload.gemini_api_key = geminiKey;
     if (smtpPass) payload.smtp_password = smtpPass;
     if (scheduleTime) payload.daily_run_time = scheduleTime;
+    if (supabaseUrl) payload.supabase_url = supabaseUrl;
+    if (supabaseKey) payload.supabase_key = supabaseKey;
 
     try {
         const res = await fetch(`${API_BASE}/api/settings`, {
@@ -679,6 +709,38 @@ async function saveSettings() {
     } catch (e) {
         statusMsg.innerText = 'Error saving settings.';
         statusMsg.classList.add('text-rose-600');
+    }
+}
+
+async function syncLocalToSupabase() {
+    const btn = document.getElementById('btn-sync-supabase');
+    const msg = document.getElementById('supabase-sync-msg');
+    if (!btn || !msg) return;
+
+    btn.disabled = true;
+    btn.classList.add('opacity-70');
+    msg.className = 'text-xs text-zinc-400';
+    msg.innerText = 'Syncing local database to Supabase cloud...';
+
+    try {
+        const res = await fetch(`${API_BASE}/api/supabase/sync`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            msg.className = 'text-xs text-emerald-400';
+            msg.innerText = `✓ Synced: ${data.jobs_synced} jobs, ${data.evals_synced} evaluations uploaded!`;
+            loadStats();
+            fetchJobs();
+            loadSettings();
+        } else {
+            msg.className = 'text-xs text-rose-400';
+            msg.innerText = `✗ Sync failed: ${data.message || 'Unknown error'}`;
+        }
+    } catch (e) {
+        msg.className = 'text-xs text-rose-400';
+        msg.innerText = `✗ Sync error: ${e.message}`;
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70');
     }
 }
 

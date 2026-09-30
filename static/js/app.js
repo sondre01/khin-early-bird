@@ -8,6 +8,9 @@ const API_BASE = (window.location.port === '5500' || window.location.port === '5
 let currentFilterJobType = 'all';
 let currentModalJobId = null;
 let sseConnection = null;
+let statsLoaded = false;
+let jobsLoaded = false;
+let profileLoaded = false;
 
 // URL Sanitizer & Platform Resolver (Prevents 404s like "We can't find this page")
 function getCleanApplyUrl(job) {
@@ -49,12 +52,18 @@ function getLinkedInSearchUrl(job) {
     return `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(cleanCompany + ' ' + cleanTitle)}&location=Philippines`;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initApp() {
     loadStats();
     fetchJobs();
     loadSettings();
     pollPipelineStatus();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 // Tab Navigation
 function switchTab(tabId) {
@@ -73,11 +82,10 @@ function switchTab(tabId) {
         activeNav.classList.remove('text-zinc-400');
     }
 
-    if (tabId === 'dashboard') loadStats();
-    if (tabId === 'jobs') fetchJobs();
-    if (tabId === 'profile') loadProfile();
-    
-    if (window.lucide) lucide.createIcons();
+    // Only load if not yet loaded; prevents harsh refetches & flickering when toggling tabs
+    if (tabId === 'dashboard' && !statsLoaded) loadStats();
+    if (tabId === 'jobs' && !jobsLoaded) fetchJobs();
+    if (tabId === 'profile' && !profileLoaded) loadProfile();
 }
 
 // Stats & Overview
@@ -85,6 +93,7 @@ async function loadStats() {
     try {
         const res = await fetch(`${API_BASE}/api/stats`);
         const data = await res.json();
+        statsLoaded = true;
 
         document.getElementById('stat-total-jobs').innerText = data.total_jobs || 0;
         document.getElementById('stat-high-matches').innerText = data.high_match_jobs || 0;
@@ -139,18 +148,21 @@ async function loadStats() {
 
 async function loadTopJobsPreview() {
     try {
-        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80&location=ncr`);
-        const data = await res.json();
         const container = document.getElementById('dashboard-top-jobs');
         if (!container) return;
 
+        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80&location=ncr`);
+        const data = await res.json();
+
         if (!data.jobs || data.jobs.length === 0) {
-            container.innerHTML = `<div class="col-span-3 text-center py-6 text-xs text-slate-400">No jobs scored above 80% yet. Run the scraper to discover opportunities.</div>`;
+            container.innerHTML = `<div class="col-span-3 text-center py-6 text-xs text-zinc-500">No jobs scored above 80% yet. Run the scraper to discover opportunities.</div>`;
             return;
         }
 
         container.innerHTML = data.jobs.map(j => renderJobCard(j)).join('');
-        if (window.lucide) lucide.createIcons();
+        if (window.lucide) {
+            lucide.createIcons({ root: container });
+        }
     } catch (e) {
         console.error('Error loading top jobs preview:', e);
     }
@@ -187,6 +199,7 @@ async function fetchJobs() {
     try {
         const res = await fetch(url);
         const data = await res.json();
+        jobsLoaded = true;
         const container = document.getElementById('jobs-container');
         const emptyState = document.getElementById('jobs-empty');
 
@@ -197,7 +210,9 @@ async function fetchJobs() {
             emptyState.classList.add('hidden');
             container.innerHTML = data.jobs.map(j => renderJobCard(j)).join('');
         }
-        if (window.lucide) lucide.createIcons();
+        if (window.lucide && container) {
+            lucide.createIcons({ root: container });
+        }
     } catch (e) {
         console.error('Error fetching jobs:', e);
     }
@@ -457,7 +472,9 @@ async function openJobModal(jobId) {
         const modal = document.getElementById('job-modal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        if (window.lucide) lucide.createIcons();
+        if (window.lucide) {
+            lucide.createIcons({ root: modal });
+        }
     } catch (e) {
         console.error('Error opening job modal:', e);
     }
@@ -768,6 +785,7 @@ async function loadProfile() {
     try {
         const res = await fetch(`${API_BASE}/api/profile`);
         const data = await res.json();
+        profileLoaded = true;
         if (data.structured) {
             document.getElementById('profile-name').innerText = data.structured.name;
         }

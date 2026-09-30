@@ -102,6 +102,64 @@ async def api_update_job_status(job_id: str, payload: StatusUpdate):
     update_job_status(job_id, payload.status)
     return {"success": True, "job_id": job_id, "new_status": payload.status}
 
+@router.get("/api/jobs/{job_id}/action", response_class=HTMLResponse)
+async def api_job_quick_action(job_id: str, status: str = "applied"):
+    """One-click direct action from daily email digest to cancel out or mark applied"""
+    valid_status = status.lower()
+    if valid_status not in ("applied", "dismissed", "saved", "new"):
+        valid_status = "applied"
+
+    job = get_job_by_id(job_id)
+    title = job.get("title", "Job Posting") if job else "Job Opportunity"
+    company = job.get("company", "Company") if job else ""
+
+    update_job_status(job_id, valid_status)
+
+    if valid_status == "applied":
+        headline = "Application Recorded"
+        subtext = "This role is marked as Applied. It will be hidden from all future daily email digests and active job searches."
+        badge = "✓ APPLIED"
+    elif valid_status == "dismissed":
+        headline = "Opportunity Hidden & Cancelled"
+        subtext = "This role has been cancelled out and hidden. It will no longer appear in your morning email digests."
+        badge = "✕ HIDDEN"
+    else:
+        headline = "Status Updated"
+        subtext = f"Status set to {valid_status}."
+        badge = valid_status.upper()
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#090A0C]">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{headline} | Khin Early Bird</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full flex items-center justify-center p-4 font-sans text-zinc-300 antialiased">
+    <div class="max-w-md w-full bg-[#121316] border border-zinc-800 rounded-2xl p-8 shadow-2xl text-center space-y-6">
+        <div class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-mono font-medium tracking-wider bg-zinc-800 text-zinc-300 border border-zinc-700">
+            {badge}
+        </div>
+        <div class="space-y-2">
+            <h1 class="text-xl font-bold text-white tracking-tight">{headline}</h1>
+            <p class="text-xs text-zinc-400 leading-relaxed">{subtext}</p>
+        </div>
+        <div class="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-4 text-left space-y-1">
+            <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-500">Target Role</div>
+            <div class="text-sm font-semibold text-zinc-200">{title}</div>
+            <div class="text-xs text-zinc-400">{company}</div>
+        </div>
+        <div class="pt-2">
+            <a href="/" class="inline-block w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-white text-black hover:bg-zinc-200 transition shadow-sm">
+                Open Web Dashboard &rarr;
+            </a>
+        </div>
+    </div>
+</body>
+</html>
+""")
+
 def run_pipeline_worker():
     global active_pipeline_state
     active_pipeline_state["is_running"] = True

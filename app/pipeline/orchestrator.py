@@ -138,10 +138,15 @@ class PipelineOrchestrator:
             # ==========================================
             emit(4, "Delivery", "Generating responsive HTML digest and dispatching notification...", 90)
             
-            # Fetch top jobs to include in digest
-            top_jobs = [j for j in evaluated_jobs if j.get("match_score", 0) >= 60]
+            # Fetch top jobs to include in digest (excluding already applied or cancelled/dismissed jobs)
+            existing_statuses = {j["id"]: j.get("status", "new") for j in get_jobs(status="all", location_filter="all")}
+            active_evaluated = [
+                j for j in evaluated_jobs
+                if existing_statuses.get(j.get("id"), "new") not in ("applied", "dismissed")
+            ]
+            top_jobs = [j for j in active_evaluated if j.get("match_score", 0) >= 60]
             if not top_jobs:
-                top_jobs = evaluated_jobs[:10]
+                top_jobs = active_evaluated[:10]
                 
             email_sent = False
             if send_email:

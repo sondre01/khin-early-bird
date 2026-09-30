@@ -43,6 +43,7 @@ AUTO_RUN_ON_STARTUP = os.getenv("AUTO_RUN_ON_STARTUP", "false").lower() in ("1",
 # Web Server
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://khin-early-bird.vercel.app").rstrip("/")
 DB_PATH = DATA_DIR / "early_bird.db"
 
 # Role Categories & Target Search Keywords

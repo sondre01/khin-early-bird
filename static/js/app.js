@@ -63,14 +63,14 @@ function switchTab(tabId) {
     if (target) target.classList.remove('hidden');
 
     document.querySelectorAll('.nav-tab').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white');
-        btn.classList.add('text-slate-300');
+        btn.classList.remove('bg-white', 'text-black', 'shadow-xs');
+        btn.classList.add('text-zinc-400');
     });
 
     const activeNav = document.getElementById(`nav-${tabId}`);
     if (activeNav) {
-        activeNav.classList.add('bg-blue-600', 'text-white');
-        activeNav.classList.remove('text-slate-300');
+        activeNav.classList.add('bg-white', 'text-black', 'shadow-xs');
+        activeNav.classList.remove('text-zinc-400');
     }
 
     if (tabId === 'dashboard') loadStats();
@@ -117,17 +117,17 @@ async function loadStats() {
                 const label = roleLabels[key] || key.replace('_', ' ').toUpperCase();
                 const pct = Math.round((count / maxVal) * 100);
                 html += `
-                <div class="space-y-1">
-                    <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs font-medium text-zinc-300">
                         <span>${label}</span>
-                        <span class="text-blue-600">${count} opportunities</span>
+                        <span class="text-zinc-200 font-mono text-[11px]">${count} roles</span>
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div class="bg-blue-600 h-2 rounded-full" style="width: ${pct}%"></div>
+                    <div class="w-full bg-zinc-800/80 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-zinc-200 h-1.5 rounded-full" style="width: ${pct}%"></div>
                     </div>
                 </div>`;
             }
-            breakdownContainer.innerHTML = html || '<p class="text-xs text-slate-400">No role records yet.</p>';
+            breakdownContainer.innerHTML = html || '<p class="text-xs text-zinc-500">No role records yet.</p>';
         }
 
         // Load Top Jobs preview for dashboard
@@ -207,130 +207,102 @@ function renderJobCard(job) {
     const score = job.match_score || 0;
     const isHigh = score >= 80;
     const isMod = score >= 60;
-    const scoreColorClass = isHigh ? 'bg-emerald-500 text-white' : (isMod ? 'bg-amber-500 text-white' : 'bg-slate-400 text-white');
+
+    // Minimalist score badge: crisp white for high match, clean neutral grey for moderate
+    const scoreBadge = isHigh 
+        ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white text-black shadow-xs tracking-tight">${score}% Fit</span>`
+        : (isMod 
+            ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-200 border border-zinc-700">${score}% Fit</span>`
+            : `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-900 text-zinc-500 border border-zinc-800">${score}%</span>`);
+
     const isIntern = job.job_type === 'Internship';
-    const typeBadgeClass = isIntern ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-indigo-100 text-indigo-800 border-indigo-200';
-    const typeIcon = isIntern ? '🎓' : '💼';
+    const typeBadge = isIntern 
+        ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400 border border-zinc-800">Internship</span>`
+        : `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-200 border border-zinc-700/80">Regular</span>`;
 
     const roleName = (job.role_category || '').replace('_', ' ').toUpperCase();
 
     const skills = (job.matched_skills || []).slice(0, 3).map(s => 
-        `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">${s}</span>`
+        `<span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 text-[10px] border border-zinc-800/80 font-mono">${s}</span>`
     ).join('');
 
     const statusBadge = job.status === 'applied' 
-        ? `<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Applied</span>`
-        : (job.status === 'saved' ? `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">Saved</span>` 
-        : (job.status === 'dismissed' ? `<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold">Hidden</span>` : ''));
+        ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 text-[10px] font-mono border border-zinc-700">✓ Applied</span>`
+        : (job.status === 'saved' ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-mono border border-zinc-700">★ Saved</span>` 
+        : (job.status === 'dismissed' ? `<span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 text-[10px] font-mono border border-zinc-800 line-through">Hidden</span>` : ''));
 
-    // Action button depending on status
     const hideOrRestoreBtn = job.status === 'dismissed'
-        ? `<button onclick="restoreJob(event, '${job.id}')" title="Restore / Unhide Application" class="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>`
-        : `<button onclick="dismissJob(event, '${job.id}')" title="Hide / Cancel Out (No chance or rejected)" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"><i data-lucide="eye-off" class="w-4 h-4"></i></button>`;
+        ? `<button onclick="restoreJob(event, '${job.id}')" title="Restore Opportunity" class="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>`
+        : `<button onclick="dismissJob(event, '${job.id}')" title="Hide / Cancel Out" class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition"><i data-lucide="eye-off" class="w-4 h-4"></i></button>`;
 
-    // Recency badge calculation
-    const ageDays = job.posted_age_days !== undefined ? job.posted_age_days : 999;
-    const isToday = ageDays <= 0.3 || (job.posted_date || '').toLowerCase().includes('today') || (job.posted_date || '').toLowerCase().includes('hour');
-    const isRecent = ageDays <= 3.0;
-    const isWeek = ageDays <= 7.0;
-
-    let recencyBadgeClass = 'bg-slate-50 text-slate-600 border-slate-200';
-    let recencyIcon = '🕒';
-    if (isToday) {
-        recencyBadgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold';
-        recencyIcon = '⚡';
-    } else if (isRecent) {
-        recencyBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200 font-semibold';
-        recencyIcon = '✨';
-    } else if (isWeek) {
-        recencyBadgeClass = 'bg-purple-50 text-purple-800 border-purple-200 font-medium';
-        recencyIcon = '📅';
-    }
-
-    // Consensus Badge
-    let consensusBadge = '';
     const vPassed = job.validators_passed !== undefined ? job.validators_passed : 0;
-    if (vPassed === 3) {
-        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-black bg-emerald-100 text-emerald-800 border-emerald-300 shadow-xs" title="Triple Verified: Gemini AI, ML Vector, and Preference Engine all passed">⭐⭐⭐ 3/3 Verified</span>`;
-    } else if (vPassed === 2) {
-        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-bold bg-blue-100 text-blue-800 border-blue-200" title="Dual Verified: 2 of 3 validators passed">⭐⭐ 2/3 Verified</span>`;
-    } else if (vPassed === 1) {
-        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-semibold bg-amber-100 text-amber-800 border-amber-200" title="Borderline: Only 1 validator passed">⚠️ 1/3 Borderline</span>`;
-    } else {
-        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-bold bg-rose-100 text-rose-800 border-rose-200" title="Unqualified: Failed seniority or domain checks">❌ 0/3 Unqualified</span>`;
-    }
+    const consensusBadge = vPassed >= 2 
+        ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-zinc-400 border border-zinc-800">${vPassed}/3 Verified</span>`
+        : '';
 
     return `
-    <div id="job-card-${job.id}" class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
+    <div id="job-card-${job.id}" class="bg-[#121316] rounded-2xl border border-zinc-800/90 hover:border-zinc-600/70 p-5 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between group">
         <div class="space-y-3">
             <div class="flex items-start justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">${job.source}</span>
-                    <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${typeBadgeClass}">
-                        ${typeIcon} ${job.job_type}
-                    </span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700">${roleName}</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800/80 text-zinc-300 border border-zinc-700/60">${job.source}</span>
+                    ${typeBadge}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-medium text-zinc-400 border border-zinc-800">${roleName}</span>
                     ${consensusBadge}
                     ${statusBadge}
                 </div>
                 <div class="flex items-center space-x-1">
-                    <div class="px-2.5 py-1 rounded-full text-xs font-black ${scoreColorClass} shadow-sm" title="Weighted Multi-Validator Consensus Score">
-                        ${score}% Match
-                    </div>
-                    <!-- Quick Mark Applied -->
-                    <button onclick="markApplied(event, '${job.id}')" title="${job.status === 'applied' ? 'Already Applied' : 'Mark as Applied'}" class="p-1.5 rounded-lg ${job.status === 'applied' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'} transition">
+                    ${scoreBadge}
+                    <button onclick="markApplied(event, '${job.id}')" title="${job.status === 'applied' ? 'Already Applied' : 'Mark as Applied'}" class="p-1.5 rounded-lg ${job.status === 'applied' ? 'text-white bg-zinc-800' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'} transition">
                         <i data-lucide="check-circle" class="w-4 h-4"></i>
                     </button>
-                    <!-- Quick Hide / Cancel Out Symbol -->
                     ${hideOrRestoreBtn}
                 </div>
             </div>
 
             <div>
-                <h3 class="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition line-clamp-2">${job.title}</h3>
-                <p class="text-xs text-slate-600 mt-1 flex items-center gap-1">
-                    <span>🏢 <strong>${job.company}</strong></span>
-                    <span>&bull;</span>
-                    <span>📍 ${job.location}</span>
+                <h3 class="font-semibold text-sm text-zinc-100 group-hover:text-white transition line-clamp-2 leading-snug">${job.title}</h3>
+                <p class="text-xs text-zinc-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span class="font-medium text-zinc-300">${job.company}</span>
+                    <span class="text-zinc-600">&bull;</span>
+                    <span>${job.location}</span>
+                    <span class="text-zinc-600">&bull;</span>
+                    <span class="text-zinc-400 font-mono text-[11px]">${job.work_type}</span>
                 </p>
 
-                <!-- Tri-Validator Scores Pill Row & Details -->
-                <div class="flex flex-wrap items-center gap-1.5 mt-2">
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold text-[10px] border border-purple-200/60" title="Validator 1: Gemini AI LLM Reasoning Score">🤖 AI: ${job.gemini_score || 0}%</span>
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200/60" title="Validator 2: Machine Learning Vector & Skill Overlap">🧠 ML: ${job.ml_score || 0}%</span>
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 font-bold text-[10px] border border-teal-200/60" title="Validator 3: Candidate Criteria & Preference Engine">⚖️ Fit: ${job.preference_score || 0}%</span>
-                    <span class="text-slate-300">|</span>
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border ${recencyBadgeClass} text-[10px]" title="Posted: ${job.posted_date || 'Recently'}">
-                        <span>${recencyIcon}</span>
-                        <strong>${job.posted_date || 'Recently'}</strong>
-                    </span>
-                    <span class="text-slate-400">&bull;</span>
-                    <span class="text-slate-500 font-medium text-[11px]">${job.work_type}</span>
+                <!-- Minimalist Metadata Row -->
+                <div class="flex items-center gap-2 mt-2.5 text-[10px] font-mono text-zinc-400 bg-zinc-900/60 border border-zinc-800/80 px-2.5 py-1 rounded-lg">
+                    <span>AI: ${job.gemini_score || 0}%</span>
+                    <span class="text-zinc-700">&bull;</span>
+                    <span>ML: ${job.ml_score || 0}%</span>
+                    <span class="text-zinc-700">&bull;</span>
+                    <span>${job.posted_date || 'Recently'}</span>
                 </div>
             </div>
 
             <!-- Skills Chips -->
-            <div class="flex flex-wrap gap-1 pt-1">
+            <div class="flex flex-wrap gap-1 pt-0.5">
                 ${skills}
             </div>
 
             <!-- Match Reason Snippet -->
             ${job.match_reasons && job.match_reasons.length ? `
-                <div class="p-2 rounded-lg bg-slate-50 text-[11px] text-slate-600 italic border border-slate-100 line-clamp-2">
-                    💡 ${job.match_reasons[0]}
+                <div class="p-2.5 rounded-xl bg-zinc-900/50 text-[11px] text-zinc-400 border border-zinc-850/80 line-clamp-2 leading-relaxed">
+                    ${job.match_reasons[0]}
                 </div>
             ` : ''}
         </div>
 
-        <div class="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between">
-            <button onclick="openJobModal('${job.id}')" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition">
-                View Match Breakdown &rarr;
+        <div class="pt-4 border-t border-zinc-800/80 mt-4 flex items-center justify-between">
+            <button onclick="openJobModal('${job.id}')" class="text-xs font-medium text-zinc-400 hover:text-white transition flex items-center gap-1">
+                <span>View Details</span>
+                <span>&rarr;</span>
             </button>
             <div class="flex items-center space-x-1.5">
-                <a href="${getGoogleJobsUrl(job)}" target="_blank" rel="noopener noreferrer" title="Search all portals (Glassdoor, Lever, Workday) on Google Jobs" class="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-[11px] font-semibold border border-transparent hover:border-slate-200">
-                    <span>🔍 Google</span>
+                <a href="${getGoogleJobsUrl(job)}" target="_blank" rel="noopener noreferrer" title="Search on Google Jobs" class="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition text-[11px] font-mono">
+                    Google
                 </a>
-                <a href="${getCleanApplyUrl(job)}" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+                <a href="${getCleanApplyUrl(job)}" target="_blank" rel="noopener noreferrer" class="bg-white hover:bg-zinc-200 text-black text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1">
                     <span>Apply</span>
                     <span>&rarr;</span>
                 </a>
@@ -344,8 +316,8 @@ function renderJobCard(job) {
 function setJobTypeFilter(type) {
     currentFilterJobType = type;
     document.querySelectorAll('.seg-btn').forEach(b => {
-        b.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
-        b.classList.add('text-slate-600');
+        b.classList.remove('bg-white', 'text-black', 'shadow-xs');
+        b.classList.add('text-zinc-400');
     });
 
     const activeMap = {
@@ -355,8 +327,8 @@ function setJobTypeFilter(type) {
     };
     const activeBtn = document.getElementById(activeMap[type]);
     if (activeBtn) {
-        activeBtn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
-        activeBtn.classList.remove('text-slate-600');
+        activeBtn.classList.add('bg-white', 'text-black', 'shadow-xs');
+        activeBtn.classList.remove('text-zinc-400');
     }
     fetchJobs();
 }
@@ -402,7 +374,15 @@ async function openJobModal(jobId) {
         document.getElementById('modal-match-score').innerText = `${job.match_score || 0}%`;
         document.getElementById('modal-match-level').innerText = job.match_level || 'Evaluated';
         document.getElementById('modal-description').innerText = job.description || 'No description provided.';
-        document.getElementById('modal-apply-link').href = job.apply_url || '#';
+        
+        // Sanitize outbound apply and search URLs
+        document.getElementById('modal-apply-link').href = getCleanApplyUrl(job);
+        if (document.getElementById('modal-google-jobs-link')) {
+            document.getElementById('modal-google-jobs-link').href = getGoogleJobsUrl(job);
+        }
+        if (document.getElementById('modal-linkedin-link')) {
+            document.getElementById('modal-linkedin-link').href = getLinkedInSearchUrl(job);
+        }
 
         // Tri-Validator Consensus Panel
         const details = job.validator_details || {};
@@ -412,25 +392,27 @@ async function openJobModal(jobId) {
 
         if (document.getElementById('modal-validators-consensus')) {
             const passed = job.validators_passed !== undefined ? job.validators_passed : 0;
-            const badgeClass = passed === 3 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : (passed === 2 ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-slate-100 text-slate-700');
-            document.getElementById('modal-validators-consensus').className = `px-2 py-0.5 rounded-full text-[10px] font-black border ${badgeClass}`;
+            const badgeClass = passed === 3 
+                ? 'bg-zinc-800 text-zinc-100 border-zinc-700' 
+                : (passed === 2 ? 'bg-zinc-850 text-zinc-300 border-zinc-800' : 'bg-zinc-900 text-zinc-500 border-zinc-850');
+            document.getElementById('modal-validators-consensus').className = `px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${badgeClass}`;
             document.getElementById('modal-validators-consensus').innerText = `${passed}/3 Validators Verified`;
         }
 
         if (document.getElementById('modal-v-gemini-score')) {
             const gScore = job.gemini_score || vGemini.score || 0;
             document.getElementById('modal-v-gemini-score').innerText = `${gScore}%`;
-            document.getElementById('modal-v-gemini-status').innerText = (gScore >= 70 || vGemini.passed) ? '✅ Approved' : '⚠️ Marginal';
+            document.getElementById('modal-v-gemini-status').innerText = (gScore >= 70 || vGemini.passed) ? 'Approved' : 'Marginal';
         }
         if (document.getElementById('modal-v-ml-score')) {
             const mScore = job.ml_score || vMl.score || 0;
             document.getElementById('modal-v-ml-score').innerText = `${mScore}%`;
-            document.getElementById('modal-v-ml-status').innerText = (mScore >= 65 || vMl.passed) ? '✅ Approved' : '⚠️ Marginal';
+            document.getElementById('modal-v-ml-status').innerText = (mScore >= 65 || vMl.passed) ? 'Approved' : 'Marginal';
         }
         if (document.getElementById('modal-v-pref-score')) {
             const pScore = job.preference_score || vPref.score || 0;
             document.getElementById('modal-v-pref-score').innerText = `${pScore}%`;
-            document.getElementById('modal-v-pref-status').innerText = (pScore >= 70 || vPref.passed) ? '✅ Approved' : '❌ Flagged';
+            document.getElementById('modal-v-pref-status').innerText = (pScore >= 70 || vPref.passed) ? 'Approved' : 'Flagged';
         }
 
         // Checks and red flags
@@ -440,15 +422,15 @@ async function openJobModal(jobId) {
             const redFlags = vPref.red_flags || [];
             let html = '';
             if (checksList.length > 0) {
-                html += checksList.map(c => `<div class="flex items-center gap-1.5 text-emerald-700 font-medium"><span>✓</span><span>${c}</span></div>`).join('');
+                html += checksList.map(c => `<div class="flex items-center gap-1.5 text-zinc-300"><span>✓</span><span>${c}</span></div>`).join('');
             }
             if (redFlags.length > 0) {
-                html += redFlags.map(r => `<div class="flex items-center gap-1.5 text-rose-600 font-semibold"><span>⚠</span><span>${r}</span></div>`).join('');
+                html += redFlags.map(r => `<div class="flex items-center gap-1.5 text-zinc-400"><span>⚠</span><span>${r}</span></div>`).join('');
             }
             if (vMl.cosine_similarity) {
-                html += `<div class="flex items-center gap-1.5 text-indigo-600"><span>≈</span><span>Vector TF-IDF Cosine Similarity: ${(vMl.cosine_similarity * 100).toFixed(1)}%</span></div>`;
+                html += `<div class="flex items-center gap-1.5 text-zinc-400"><span>≈</span><span>Vector TF-IDF Cosine Similarity: ${(vMl.cosine_similarity * 100).toFixed(1)}%</span></div>`;
             }
-            checksEl.innerHTML = html || '<div class="text-slate-400">All 3 automated validators evaluated this role.</div>';
+            checksEl.innerHTML = html || '<div class="text-zinc-500">All 3 automated validators evaluated this role.</div>';
         }
 
         // Reasons
@@ -458,14 +440,14 @@ async function openJobModal(jobId) {
         // Matched Skills
         const matchedEl = document.getElementById('modal-matched-skills');
         matchedEl.innerHTML = (job.matched_skills || []).map(s => 
-            `<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">${s}</span>`
-        ).join('') || '<span class="text-slate-400">Standard Computer Engineering skillset</span>';
+            `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 text-[10px] font-mono border border-zinc-700/80">${s}</span>`
+        ).join('') || '<span class="text-zinc-500">Standard Computer Engineering skillset</span>';
 
         // Missing Skills
         const missingEl = document.getElementById('modal-missing-skills');
         missingEl.innerHTML = (job.missing_skills || []).map(s => 
-            `<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">${s}</span>`
-        ).join('') || '<span class="text-slate-400">None identified</span>';
+            `<span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 text-[10px] font-mono border border-zinc-800">${s}</span>`
+        ).join('') || '<span class="text-zinc-500">None identified</span>';
 
         const modal = document.getElementById('job-modal');
         modal.classList.remove('hidden');

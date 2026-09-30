@@ -5,6 +5,7 @@ from app.scrapers.aggregator import JobAggregator
 from app.pipeline.normalizer import JobNormalizer
 from app.pipeline.ai_matcher import AIJobMatcher
 from app.pipeline.notifier import EmailNotifier
+from app.pipeline.link_validator import LinkValidator
 from app.database import (
     start_scrape_run, finish_scrape_run, save_job, save_evaluation, get_jobs
 )
@@ -18,6 +19,7 @@ class PipelineOrchestrator:
         self.normalizer = JobNormalizer()
         self.ai_matcher = AIJobMatcher(api_key=gemini_api_key)
         self.notifier = EmailNotifier()
+        self.link_validator = LinkValidator(timeout=6)
 
     def run(
         self,
@@ -68,20 +70,30 @@ class PipelineOrchestrator:
             emit(1, "Extraction", f"Completed extraction! Gathered {len(raw_jobs)} unique listings.", 35)
 
             # ==========================================
-            # PHASE 2: NORMALIZATION & DEDUPLICATION
+            # PHASE 2: NORMALIZATION, LINK VERIFICATION & DEDUPLICATION
             # ==========================================
-            emit(2, "Transformation", "Cleaning, standardizing schemas, and segregating Internships vs Regular roles...", 40)
+            emit(2, "Transformation", "Verifying live application links, cleaning, and standardizing schemas...", 40)
             normalized_jobs = []
             new_jobs_count = 0
+            dead_links_rejected = 0
 
             for i, raw_item in enumerate(raw_jobs):
                 cleaned = self.normalizer.normalize(raw_item)
+                
+                # Automated Liveness Guard: Verify URL actually accepts applications
+                apply_url = cleaned.get("apply_url", "")
+                is_live, reason = self.link_validator.verify_link(apply_url)
+                if not is_live:
+                    dead_links_rejected += 1
+                    logger.warning(f"Discarded non-live posting: {cleaned['title']} @ {cleaned['company']} ({reason})")
+                    continue
+
                 is_new = save_job(cleaned)
                 if is_new:
                     new_jobs_count += 1
                 normalized_jobs.append(cleaned)
                 
-            emit(2, "Transformation", f"Transformation complete. {len(normalized_jobs)} jobs formatted ({new_jobs_count} new entries saved).", 55)
+            emit(2, "Transformation", f"Transformation complete. {len(normalized_jobs)} live jobs verified ({dead_links_rejected} dead links rejected, {new_jobs_count} new entries saved).", 55)
 
             # ==========================================
             # PHASE 3: AI VALIDATION & MATCHING

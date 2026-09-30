@@ -1,11 +1,12 @@
 import re
 from typing import Dict, Any
 from app.scrapers.base import JobItem
+from app.utils.url_resolver import resolve_apply_url
 
 class JobNormalizer:
     @staticmethod
     def normalize(job: JobItem) -> Dict[str, Any]:
-        """Cleans, normalizes, and categorizes a scraped job item."""
+        """Cleans, normalizes, categorizes, and resolves apply URL for a scraped job item."""
         d = job.to_dict()
         
         # Clean title
@@ -45,6 +46,9 @@ class JobNormalizer:
             
         # Refine role category
         d["role_category"] = JobNormalizer.detect_role_category(title, d.get("description", ""))
+        
+        # Sanitize and resolve apply URL to prevent 404s
+        d["apply_url"] = resolve_apply_url(d.get("source", ""), title, company, d.get("apply_url"))
         
         return d
 

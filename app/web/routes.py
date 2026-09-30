@@ -19,6 +19,7 @@ from app.pipeline.orchestrator import PipelineOrchestrator
 from app.pipeline.notifier import EmailNotifier
 from app.profile_loader import STRUCTURED_PROFILE, load_raw_resume_texts
 from app.scheduler import scheduler_instance
+from app.pipeline.link_validator import prune_dead_jobs, LinkValidator
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -234,6 +235,19 @@ async def api_preview_digest():
     notifier = EmailNotifier()
     html = notifier.generate_html_digest(jobs)
     return HTMLResponse(content=html)
+
+@router.post("/api/jobs/verify-links")
+@router.get("/api/jobs/verify-links")
+async def api_verify_links():
+    """Audits all active jobs in the database, removes dead/expired application links, and returns results."""
+    result = prune_dead_jobs()
+    return {
+        "success": True,
+        "checked": result["checked"],
+        "removed": result["removed"],
+        "active": result["active"],
+        "message": f"Verified {result['checked']} links. Removed {result['removed']} dead/expired listings. {result['active']} active jobs remain."
+    }
 
 @router.get("/api/profile")
 async def api_candidate_profile():

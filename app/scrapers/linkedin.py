@@ -5,6 +5,7 @@ from typing import List
 import requests
 from bs4 import BeautifulSoup
 from app.scrapers.base import BaseScraper, JobItem, generate_job_id
+from app.utils.url_resolver import resolve_apply_url
 
 class LinkedInScraper(BaseScraper):
     def __init__(self):
@@ -52,9 +53,8 @@ class LinkedInScraper(BaseScraper):
                     title = title_elem.text.strip()
                     company = company_elem.text.strip() if company_elem else "Confidential Company"
                     loc = location_elem.text.strip() if location_elem else location
-                    apply_url = link_elem["href"].strip() if link_elem and link_elem.has_attr("href") else f"https://www.linkedin.com/jobs/search?keywords={encoded_kw}"
-                    # Clean up tracking params from URL
-                    clean_url = apply_url.split("?")[0] if "?" in apply_url else apply_url
+                    raw_apply_url = link_elem["href"].strip() if link_elem and link_elem.has_attr("href") else f"https://www.linkedin.com/jobs/search?keywords={encoded_kw}"
+                    clean_url = resolve_apply_url("LinkedIn", title, company, raw_apply_url)
                     
                     posted_date = date_elem.text.strip() if date_elem else "Recently"
                     

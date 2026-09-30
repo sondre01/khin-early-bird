@@ -9,6 +9,46 @@ let currentFilterJobType = 'all';
 let currentModalJobId = null;
 let sseConnection = null;
 
+// URL Sanitizer & Platform Resolver (Prevents 404s like "We can't find this page")
+function getCleanApplyUrl(job) {
+    const raw = (job.apply_url || '').trim();
+    const source = (job.source || '').toLowerCase();
+    const cleanCompany = (job.company || '').replace(/[()[\]{}]/g, '').trim();
+    const cleanTitle = (job.title || '').replace(/[()[\]{}]/g, '').trim();
+    const query = encodeURIComponent(`${cleanCompany} ${cleanTitle}`);
+
+    if (source.includes('indeed') || raw.includes('indeed.com')) {
+        const jkMatch = raw.match(/[?&]jk=([a-fA-F0-9]{16})\b/);
+        if (jkMatch) return `https://ph.indeed.com/viewjob?jk=${jkMatch[1]}`;
+        return `https://ph.indeed.com/jobs?q=${query}&l=Philippines`;
+    }
+    if (source.includes('jobstreet') || raw.includes('jobstreet.com')) {
+        const idMatch = raw.match(/\/job(?:s)?\/(\d{6,12})\b/);
+        if (idMatch) return `https://ph.jobstreet.com/job/${idMatch[1]}`;
+        return `https://ph.jobstreet.com/jobs?keywords=${query}`;
+    }
+    if (source.includes('linkedin') || raw.includes('linkedin.com')) {
+        const viewMatch = raw.match(/\/jobs\/view\/(?:[a-zA-Z0-9\-]+-)?(\d{8,14})\b/);
+        if (viewMatch) return `https://ph.linkedin.com/jobs/view/${viewMatch[1]}`;
+        if (raw.includes('linkedin.com/jobs/view')) return raw.split('?')[0];
+        return `https://www.linkedin.com/jobs/search/?keywords=${query}&location=Philippines`;
+    }
+    if (raw && raw.startsWith('http') && !raw.endsWith('#')) return raw;
+    return `https://www.google.com/search?q=${query}+apply+Philippines`;
+}
+
+function getGoogleJobsUrl(job) {
+    const cleanCompany = (job.company || '').replace(/[()[\]{}]/g, '').trim();
+    const cleanTitle = (job.title || '').replace(/[()[\]{}]/g, '').trim();
+    return `https://www.google.com/search?q=${encodeURIComponent(cleanCompany + ' ' + cleanTitle + ' apply Philippines')}`;
+}
+
+function getLinkedInSearchUrl(job) {
+    const cleanCompany = (job.company || '').replace(/[()[\]{}]/g, '').trim();
+    const cleanTitle = (job.title || '').replace(/[()[\]{}]/g, '').trim();
+    return `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(cleanCompany + ' ' + cleanTitle)}&location=Philippines`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     fetchJobs();
@@ -284,9 +324,15 @@ function renderJobCard(job) {
             <button onclick="openJobModal('${job.id}')" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition">
                 View Match Breakdown &rarr;
             </button>
-            <a href="${job.apply_url}" target="_blank" class="bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-sm">
-                Apply &rarr;
-            </a>
+            <div class="flex items-center space-x-1.5">
+                <a href="${getGoogleJobsUrl(job)}" target="_blank" rel="noopener noreferrer" title="Search all portals (Glassdoor, Lever, Workday) on Google Jobs" class="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-[11px] font-semibold border border-transparent hover:border-slate-200">
+                    <span>🔍 Google</span>
+                </a>
+                <a href="${getCleanApplyUrl(job)}" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-sm flex items-center gap-1">
+                    <span>Apply</span>
+                    <span>&rarr;</span>
+                </a>
+            </div>
         </div>
     </div>
     `;

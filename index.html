@@ -332,11 +332,13 @@
                         </select>
                     </div>
 
-                    <!-- Match Score Filter -->
+                    <!-- Match Score & Multi-Validator Filter -->
                     <div class="flex items-center space-x-1">
                         <label class="font-semibold text-slate-600">Match:</label>
                         <select id="filter-score" onchange="fetchJobs()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="0">All Match Scores</option>
+                            <option value="triple">⭐⭐⭐ Triple Verified (3/3)</option>
+                            <option value="dual">⭐⭐ Dual Verified (2+/3)</option>
                             <option value="80">High Match Only (80%+)</option>
                             <option value="60">Moderate & High (60%+)</option>
                         </select>
@@ -778,10 +780,51 @@
                 <!-- AI Score Banner -->
                 <div class="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-between">
                     <div>
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-blue-800">AI Qualification Match</div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-blue-800">Multi-Validator Ensemble Score</div>
                         <div class="text-sm font-bold text-blue-950" id="modal-match-level">High Match</div>
                     </div>
                     <div class="text-2xl font-black text-blue-600" id="modal-match-score">95%</div>
+                </div>
+
+                <!-- Tri-Validator Multi-Layer Consensus Panel -->
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                            <span>Tri-Validator Multi-Layer Consensus</span>
+                        </span>
+                        <span id="modal-validators-consensus" class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            3/3 Verified
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2.5 pt-1">
+                        <!-- Validator 1: Gemini AI -->
+                        <div class="p-2.5 rounded-lg bg-white border border-slate-200 text-center shadow-xs">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">🤖 1. Gemini AI</div>
+                            <div class="text-base font-black text-purple-600 mt-0.5" id="modal-v-gemini-score">90%</div>
+                            <div class="text-[10px] font-semibold text-slate-500" id="modal-v-gemini-status">Approved</div>
+                        </div>
+
+                        <!-- Validator 2: ML Vector Matcher -->
+                        <div class="p-2.5 rounded-lg bg-white border border-slate-200 text-center shadow-xs">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">🧠 2. ML Vector</div>
+                            <div class="text-base font-black text-indigo-600 mt-0.5" id="modal-v-ml-score">79%</div>
+                            <div class="text-[10px] font-semibold text-slate-500" id="modal-v-ml-status">Approved</div>
+                        </div>
+
+                        <!-- Validator 3: Criteria & Preferences -->
+                        <div class="p-2.5 rounded-lg bg-white border border-slate-200 text-center shadow-xs">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">⚖️ 3. Criteria Fit</div>
+                            <div class="text-base font-black text-teal-600 mt-0.5" id="modal-v-pref-score">100%</div>
+                            <div class="text-[10px] font-semibold text-slate-500" id="modal-v-pref-status">Approved</div>
+                        </div>
+                    </div>
+
+                    <!-- Validator Detail List -->
+                    <div id="modal-validator-checks" class="text-[11px] text-slate-600 space-y-1 pt-1.5 border-t border-slate-200/60">
+                        <!-- Populated dynamically by JS -->
+                    </div>
                 </div>
 
                 <!-- Match Reasons -->

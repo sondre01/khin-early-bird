@@ -109,9 +109,27 @@ def init_db():
         missing_skills TEXT,
         evaluated_at TEXT,
         ai_model TEXT,
+        gemini_score INTEGER DEFAULT 0,
+        ml_score INTEGER DEFAULT 0,
+        preference_score INTEGER DEFAULT 0,
+        validators_passed INTEGER DEFAULT 0,
+        validator_details TEXT DEFAULT '{}',
         FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE
     )
     """)
+
+    # Migration for existing evaluations tables
+    for col_def in [
+        ("gemini_score", "INTEGER DEFAULT 0"),
+        ("ml_score", "INTEGER DEFAULT 0"),
+        ("preference_score", "INTEGER DEFAULT 0"),
+        ("validators_passed", "INTEGER DEFAULT 0"),
+        ("validator_details", "TEXT DEFAULT '{}'")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE evaluations ADD COLUMN {col_def[0]} {col_def[1]}")
+        except Exception:
+            pass
     
     # Scrape Runs Table
     cursor.execute("""
@@ -183,7 +201,7 @@ def save_job(job: Dict[str, Any]) -> bool:
         conn.close()
 
 def save_evaluation(evaluation: Dict[str, Any]):
-    """Saves AI match evaluation for a job"""
+    """Saves AI & Multi-Validator match evaluation for a job"""
     conn = get_connection()
     cursor = conn.cursor()
     now = datetime.now().isoformat()
@@ -192,8 +210,9 @@ def save_evaluation(evaluation: Dict[str, Any]):
         cursor.execute("""
         INSERT INTO evaluations (
             job_id, match_score, match_level, is_applicable,
-            match_reasons, matched_skills, missing_skills, evaluated_at, ai_model
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            match_reasons, matched_skills, missing_skills, evaluated_at, ai_model,
+            gemini_score, ml_score, preference_score, validators_passed, validator_details
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id) DO UPDATE SET
             match_score=excluded.match_score,
             match_level=excluded.match_level,
@@ -202,7 +221,12 @@ def save_evaluation(evaluation: Dict[str, Any]):
             matched_skills=excluded.matched_skills,
             missing_skills=excluded.missing_skills,
             evaluated_at=excluded.evaluated_at,
-            ai_model=excluded.ai_model
+            ai_model=excluded.ai_model,
+            gemini_score=excluded.gemini_score,
+            ml_score=excluded.ml_score,
+            preference_score=excluded.preference_score,
+            validators_passed=excluded.validators_passed,
+            validator_details=excluded.validator_details
         """, (
             evaluation["job_id"],
             evaluation.get("match_score", 0),
@@ -212,7 +236,12 @@ def save_evaluation(evaluation: Dict[str, Any]):
             json.dumps(evaluation.get("matched_skills", [])),
             json.dumps(evaluation.get("missing_skills", [])),
             now,
-            evaluation.get("ai_model", "gemini-2.5-flash")
+            evaluation.get("ai_model", "tri-validator-ensemble-v1"),
+            evaluation.get("gemini_score", 0),
+            evaluation.get("ml_score", 0),
+            evaluation.get("preference_score", 0),
+            evaluation.get("validators_passed", 0),
+            json.dumps(evaluation.get("validator_details", {}))
         ))
         conn.commit()
     finally:
@@ -223,6 +252,7 @@ def get_jobs(
     role_category: Optional[str] = None,
     source: Optional[str] = None,
     min_score: Optional[int] = None,
+    min_validators: Optional[int] = None,
     search: Optional[str] = None,
     status: Optional[str] = None,
     hide_applied: bool = False,
@@ -243,7 +273,12 @@ def get_jobs(
         e.match_reasons,
         e.matched_skills,
         e.missing_skills,
-        e.ai_model
+        e.ai_model,
+        COALESCE(e.gemini_score, 0) as gemini_score,
+        COALESCE(e.ml_score, 0) as ml_score,
+        COALESCE(e.preference_score, 0) as preference_score,
+        COALESCE(e.validators_passed, 0) as validators_passed,
+        e.validator_details
     FROM jobs j
     LEFT JOIN evaluations e ON j.id = e.job_id
     WHERE 1=1
@@ -265,6 +300,10 @@ def get_jobs(
     if min_score is not None:
         query += " AND COALESCE(e.match_score, 0) >= ?"
         params.append(min_score)
+
+    if min_validators is not None and min_validators > 0:
+        query += " AND COALESCE(e.validators_passed, 0) >= ?"
+        params.append(min_validators)
         
     if status and status.lower() not in ('all', 'active'):
         query += " AND j.status = ?"
@@ -297,6 +336,13 @@ def get_jobs(
                     d[key] = [d[key]]
             else:
                 d[key] = []
+        if d.get("validator_details"):
+            try:
+                d["validator_details"] = json.loads(d["validator_details"])
+            except Exception:
+                d["validator_details"] = {}
+        else:
+            d["validator_details"] = {}
         d["posted_age_days"] = parse_posted_age_days(d.get("posted_date"), d.get("extracted_at"))
         results.append(d)
         
@@ -351,7 +397,12 @@ def get_job_by_id(job_id: str) -> Optional[Dict[str, Any]]:
         e.match_reasons,
         e.matched_skills,
         e.missing_skills,
-        e.ai_model
+        e.ai_model,
+        COALESCE(e.gemini_score, 0) as gemini_score,
+        COALESCE(e.ml_score, 0) as ml_score,
+        COALESCE(e.preference_score, 0) as preference_score,
+        COALESCE(e.validators_passed, 0) as validators_passed,
+        e.validator_details
     FROM jobs j
     LEFT JOIN evaluations e ON j.id = e.job_id
     WHERE j.id = ?
@@ -369,6 +420,13 @@ def get_job_by_id(job_id: str) -> Optional[Dict[str, Any]]:
                 d[key] = [d[key]]
         else:
             d[key] = []
+    if d.get("validator_details"):
+        try:
+            d["validator_details"] = json.loads(d["validator_details"])
+        except Exception:
+            d["validator_details"] = {}
+    else:
+        d["validator_details"] = {}
     return d
 
 def update_job_status(job_id: str, status: str):
@@ -393,6 +451,9 @@ def get_stats() -> Dict[str, Any]:
     
     cursor.execute("SELECT COUNT(*) FROM evaluations WHERE match_score >= 80")
     high_match_jobs = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM evaluations WHERE validators_passed = 3")
+    triple_verified_jobs = cursor.fetchone()[0]
     
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE status = 'applied'")
     applied_jobs = cursor.fetchone()[0]
@@ -430,6 +491,7 @@ def get_stats() -> Dict[str, Any]:
         "internships": internships,
         "regular_jobs": regular_jobs,
         "high_match_jobs": high_match_jobs,
+        "triple_verified_jobs": triple_verified_jobs,
         "applied_jobs": applied_jobs,
         "saved_jobs": saved_jobs,
         "role_distribution": role_distribution,

@@ -130,7 +130,13 @@ async function fetchJobs() {
     let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}&sort_by=${encodeURIComponent(sortBy)}`;
     if (category !== 'all') url += `&role_category=${encodeURIComponent(category)}`;
     if (source !== 'all') url += `&source=${encodeURIComponent(source)}`;
-    if (parseInt(score) > 0) url += `&min_score=${encodeURIComponent(score)}`;
+    if (score === 'triple') {
+        url += `&min_validators=3`;
+    } else if (score === 'dual') {
+        url += `&min_validators=2`;
+    } else if (parseInt(score) > 0) {
+        url += `&min_score=${encodeURIComponent(score)}`;
+    }
     if (status !== 'all') url += `&status=${encodeURIComponent(status)}`;
     if (hideApplied) url += `&hide_applied=true`;
     if (posted !== 'all') url += `&posted_within=${encodeURIComponent(posted)}`;
@@ -199,6 +205,19 @@ function renderJobCard(job) {
         recencyIcon = '📅';
     }
 
+    // Consensus Badge
+    let consensusBadge = '';
+    const vPassed = job.validators_passed !== undefined ? job.validators_passed : 0;
+    if (vPassed === 3) {
+        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-black bg-emerald-100 text-emerald-800 border-emerald-300 shadow-xs" title="Triple Verified: Gemini AI, ML Vector, and Preference Engine all passed">⭐⭐⭐ 3/3 Verified</span>`;
+    } else if (vPassed === 2) {
+        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-bold bg-blue-100 text-blue-800 border-blue-200" title="Dual Verified: 2 of 3 validators passed">⭐⭐ 2/3 Verified</span>`;
+    } else if (vPassed === 1) {
+        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-semibold bg-amber-100 text-amber-800 border-amber-200" title="Borderline: Only 1 validator passed">⚠️ 1/3 Borderline</span>`;
+    } else {
+        consensusBadge = `<span class="px-2 py-0.5 rounded border text-[10px] font-bold bg-rose-100 text-rose-800 border-rose-200" title="Unqualified: Failed seniority or domain checks">❌ 0/3 Unqualified</span>`;
+    }
+
     return `
     <div id="job-card-${job.id}" class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
         <div class="space-y-3">
@@ -209,10 +228,11 @@ function renderJobCard(job) {
                         ${typeIcon} ${job.job_type}
                     </span>
                     <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700">${roleName}</span>
+                    ${consensusBadge}
                     ${statusBadge}
                 </div>
                 <div class="flex items-center space-x-1">
-                    <div class="px-2.5 py-1 rounded-full text-xs font-black ${scoreColorClass} shadow-sm">
+                    <div class="px-2.5 py-1 rounded-full text-xs font-black ${scoreColorClass} shadow-sm" title="Weighted Multi-Validator Consensus Score">
                         ${score}% Match
                     </div>
                     <!-- Quick Mark Applied -->
@@ -231,16 +251,19 @@ function renderJobCard(job) {
                     <span>&bull;</span>
                     <span>📍 ${job.location}</span>
                 </p>
-                <!-- Clear Date Posted Indicator & Job Details -->
-                <div class="flex flex-wrap items-center gap-1.5 mt-2 text-[11px]">
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border ${recencyBadgeClass}" title="Posted: ${job.posted_date || 'Recently'}">
-                        <span>${recencyIcon} Posted:</span>
+
+                <!-- Tri-Validator Scores Pill Row & Details -->
+                <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold text-[10px] border border-purple-200/60" title="Validator 1: Gemini AI LLM Reasoning Score">🤖 AI: ${job.gemini_score || 0}%</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200/60" title="Validator 2: Machine Learning Vector & Skill Overlap">🧠 ML: ${job.ml_score || 0}%</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 font-bold text-[10px] border border-teal-200/60" title="Validator 3: Candidate Criteria & Preference Engine">⚖️ Fit: ${job.preference_score || 0}%</span>
+                    <span class="text-slate-300">|</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border ${recencyBadgeClass} text-[10px]" title="Posted: ${job.posted_date || 'Recently'}">
+                        <span>${recencyIcon}</span>
                         <strong>${job.posted_date || 'Recently'}</strong>
                     </span>
                     <span class="text-slate-400">&bull;</span>
-                    <span class="text-slate-500 font-medium">${job.work_type}</span>
-                    <span class="text-slate-400">&bull;</span>
-                    <span class="text-slate-500 font-medium">${job.salary || 'Competitive'}</span>
+                    <span class="text-slate-500 font-medium text-[11px]">${job.work_type}</span>
                 </div>
             </div>
 
@@ -332,6 +355,53 @@ async function openJobModal(jobId) {
         document.getElementById('modal-match-level').innerText = job.match_level || 'Evaluated';
         document.getElementById('modal-description').innerText = job.description || 'No description provided.';
         document.getElementById('modal-apply-link').href = job.apply_url || '#';
+
+        // Tri-Validator Consensus Panel
+        const details = job.validator_details || {};
+        const vGemini = details.gemini || {};
+        const vMl = details.ml_vector || {};
+        const vPref = details.preference || {};
+
+        if (document.getElementById('modal-validators-consensus')) {
+            const passed = job.validators_passed !== undefined ? job.validators_passed : 0;
+            const badgeClass = passed === 3 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : (passed === 2 ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-slate-100 text-slate-700');
+            document.getElementById('modal-validators-consensus').className = `px-2 py-0.5 rounded-full text-[10px] font-black border ${badgeClass}`;
+            document.getElementById('modal-validators-consensus').innerText = `${passed}/3 Validators Verified`;
+        }
+
+        if (document.getElementById('modal-v-gemini-score')) {
+            const gScore = job.gemini_score || vGemini.score || 0;
+            document.getElementById('modal-v-gemini-score').innerText = `${gScore}%`;
+            document.getElementById('modal-v-gemini-status').innerText = (gScore >= 70 || vGemini.passed) ? '✅ Approved' : '⚠️ Marginal';
+        }
+        if (document.getElementById('modal-v-ml-score')) {
+            const mScore = job.ml_score || vMl.score || 0;
+            document.getElementById('modal-v-ml-score').innerText = `${mScore}%`;
+            document.getElementById('modal-v-ml-status').innerText = (mScore >= 65 || vMl.passed) ? '✅ Approved' : '⚠️ Marginal';
+        }
+        if (document.getElementById('modal-v-pref-score')) {
+            const pScore = job.preference_score || vPref.score || 0;
+            document.getElementById('modal-v-pref-score').innerText = `${pScore}%`;
+            document.getElementById('modal-v-pref-status').innerText = (pScore >= 70 || vPref.passed) ? '✅ Approved' : '❌ Flagged';
+        }
+
+        // Checks and red flags
+        const checksEl = document.getElementById('modal-validator-checks');
+        if (checksEl) {
+            const checksList = vPref.checks_passed || [];
+            const redFlags = vPref.red_flags || [];
+            let html = '';
+            if (checksList.length > 0) {
+                html += checksList.map(c => `<div class="flex items-center gap-1.5 text-emerald-700 font-medium"><span>✓</span><span>${c}</span></div>`).join('');
+            }
+            if (redFlags.length > 0) {
+                html += redFlags.map(r => `<div class="flex items-center gap-1.5 text-rose-600 font-semibold"><span>⚠</span><span>${r}</span></div>`).join('');
+            }
+            if (vMl.cosine_similarity) {
+                html += `<div class="flex items-center gap-1.5 text-indigo-600"><span>≈</span><span>Vector TF-IDF Cosine Similarity: ${(vMl.cosine_similarity * 100).toFixed(1)}%</span></div>`;
+            }
+            checksEl.innerHTML = html || '<div class="text-slate-400">All 3 automated validators evaluated this role.</div>';
+        }
 
         // Reasons
         const reasonsEl = document.getElementById('modal-reasons');

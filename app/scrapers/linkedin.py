@@ -57,6 +57,11 @@ class LinkedInScraper(BaseScraper):
                     clean_url = resolve_apply_url("LinkedIn", title, company, raw_apply_url)
                     
                     posted_date = date_elem.text.strip() if date_elem else "Recently"
+                    lower_date = posted_date.lower()
+                    
+                    # Recency Filter: discard roles posted a month ago or older (e.g. 1 month ago, 6 months ago, 4 weeks ago)
+                    if any(w in lower_date for w in ["month", "year", "4 week", "4 weeks"]) or re.search(r'([3-9]|\d{2,})\s*week', lower_date):
+                        continue
                     
                     # Detect work type
                     work_type = "On-site"

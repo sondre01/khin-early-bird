@@ -88,6 +88,12 @@ class PipelineOrchestrator:
                     logger.warning(f"Discarded non-live posting: {cleaned['title']} @ {cleaned['company']} ({reason})")
                     continue
 
+                # Recency Guard: Filter out roles posted a month ago or older (e.g. 1 month ago, 6 months ago, 4 weeks ago)
+                p_date = (cleaned.get("posted_date") or "").lower()
+                if any(w in p_date for w in ["month", "year", "4 week", "4 weeks"]) or re.search(r'([3-9]|\d{2,})\s*week', p_date):
+                    logger.info(f"Discarded stale posting ({cleaned.get('posted_date')}): {cleaned['title']} @ {cleaned['company']}")
+                    continue
+
                 is_new = save_job(cleaned)
                 if is_new:
                     new_jobs_count += 1

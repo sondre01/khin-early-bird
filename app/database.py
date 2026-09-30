@@ -348,8 +348,10 @@ def get_jobs(
         
     conn.close()
 
-    # Recency filter (last 24 hours, last 3 days, last 7 days, etc.)
-    if posted_within and posted_within.lower() != 'all':
+    # Recency filter: Automatically exclude jobs posted >= 1 month ago (>= 30 days) by default
+    if not posted_within or posted_within.lower() == 'all':
+        results = [r for r in results if r["posted_age_days"] < 30.0]
+    else:
         pw = posted_within.lower().strip()
         max_days_map = {
             '24h': 1.0,
@@ -362,9 +364,8 @@ def get_jobs(
             '30d': 30.0,
             '1m': 30.0
         }
-        max_days = max_days_map.get(pw)
-        if max_days is not None:
-            results = [r for r in results if r["posted_age_days"] <= max_days]
+        max_days = max_days_map.get(pw, 30.0)
+        results = [r for r in results if r["posted_age_days"] <= max_days]
 
     # Dynamic sorting
     if sort_by == "recent":

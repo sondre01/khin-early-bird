@@ -15,4 +15,4 @@ if __name__ == "__main__":
     print(f"  [+] Web Dashboard running at: http://{APP_HOST}:{APP_PORT}")
     print("  [+] Notifications: gamboa.khinandrei@gmail.com")
     print("=" * 60)
-    uvicorn.run("app.main:app", host=APP_HOST, port=APP_PORT, reload=False)
+    uvicorn.run("app.main:app", host=APP_HOST, port=APP_PORT, reload=True)

@@ -4,7 +4,7 @@ from app.scrapers.base import JobItem
 from app.scrapers.linkedin import LinkedInScraper
 from app.scrapers.jobstreet import JobstreetScraper
 from app.scrapers.indeed import IndeedScraper
-from app.config import TARGET_CATEGORIES
+from app.config import TARGET_CATEGORIES, DEFAULT_TARGET_LOCATION
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class JobAggregator:
 
     def run_all(
         self,
-        location: str = "Philippines",
+        location: str = DEFAULT_TARGET_LOCATION,
         limit_per_keyword: int = 5,
         progress_callback: Optional[Callable[[str, int, int], None]] = None
     ) -> List[JobItem]:

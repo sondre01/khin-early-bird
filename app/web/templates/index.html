@@ -332,6 +332,17 @@
                         </select>
                     </div>
 
+                    <!-- Location Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="font-semibold text-slate-600">Location:</label>
+                        <select id="filter-location" onchange="fetchJobs()" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="ncr" selected>📍 NCR & Remote (Default)</option>
+                            <option value="remote">🌐 Remote Only</option>
+                            <option value="ncr_onsite">🏢 NCR On-site / Hybrid</option>
+                            <option value="all">🌏 All Locations</option>
+                        </select>
+                    </div>
+
                     <!-- Match Score & Multi-Validator Filter -->
                     <div class="flex items-center space-x-1">
                         <label class="font-semibold text-slate-600">Match:</label>

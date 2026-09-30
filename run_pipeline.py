@@ -13,7 +13,7 @@ from app.pipeline.orchestrator import PipelineOrchestrator
 def main():
     parser = argparse.ArgumentParser(description="Khin Early Bird - Automated Extraction & Matching Pipeline")
     parser.add_argument("--limit", type=int, default=3, help="Max jobs per keyword search")
-    parser.add_argument("--location", type=str, default="Philippines", help="Target job location")
+    parser.add_argument("--location", type=str, default="Metro Manila, Philippines", help="Target job location (default: Metro Manila, Philippines)")
     parser.add_argument("--no-email", action="store_true", help="Skip sending email digest")
     args = parser.parse_args()
 

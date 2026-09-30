@@ -62,6 +62,7 @@ async def api_jobs(
     hide_applied: bool = False,
     posted_within: Optional[str] = None,
     sort_by: Optional[str] = "recent",
+    location: Optional[str] = "ncr",
     limit: int = 500,
     offset: int = 0
 ):
@@ -76,6 +77,7 @@ async def api_jobs(
         hide_applied=hide_applied,
         posted_within=posted_within,
         sort_by=sort_by,
+        location_filter=location,
         limit=limit,
         offset=offset
     )

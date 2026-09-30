@@ -23,6 +23,8 @@ USER_NAME = os.getenv("USER_NAME", "Khin Andrei Gamboa")
 USER_EMAIL = os.getenv("USER_EMAIL", "gamboa.khinandrei@gmail.com")
 USER_PHONE = os.getenv("USER_PHONE", "+63 992 421 5130")
 USER_LOCATION = os.getenv("USER_LOCATION", "Pasig City, Philippines")
+DEFAULT_TARGET_LOCATION = os.getenv("DEFAULT_TARGET_LOCATION", "Metro Manila, Philippines")
+FILTER_NCR_ONLY = os.getenv("FILTER_NCR_ONLY", "true").lower() in ("1", "true", "yes")
 
 # AI Settings
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

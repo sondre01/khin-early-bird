@@ -23,7 +23,7 @@ class EmailNotifier:
         self.host = host
         self.port = port
         self.user = user
-        self.password = password
+        self.password = (password or "").strip().replace(" ", "")
 
     def generate_html_digest(self, jobs: List[Dict[str, Any]]) -> str:
         """Builds a beautiful, responsive HTML email digest with segregation between Internships and Regular jobs"""

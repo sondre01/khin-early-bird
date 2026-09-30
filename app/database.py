@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from app.config import DB_PATH, PROJECT_ROOT
+from app.utils.location import is_ncr_location
 
 def get_connection() -> sqlite3.Connection:
     if os.getenv("VERCEL") and not DB_PATH.exists():
@@ -72,7 +73,7 @@ def parse_posted_age_days(posted_str: Optional[str], extracted_at: Optional[str]
         except Exception:
             pass
     return 999.0
-
+    
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
@@ -258,6 +259,7 @@ def get_jobs(
     hide_applied: bool = False,
     posted_within: Optional[str] = None,
     sort_by: Optional[str] = "recent",
+    location_filter: Optional[str] = "ncr",
     limit: int = 500,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
@@ -366,6 +368,16 @@ def get_jobs(
         }
         max_days = max_days_map.get(pw, 30.0)
         results = [r for r in results if r["posted_age_days"] <= max_days]
+
+    # Location filtering
+    if location_filter and location_filter.lower() != "all":
+        lf = location_filter.lower()
+        if lf == "ncr":
+            results = [r for r in results if is_ncr_location(r.get("location"), r.get("work_type"))]
+        elif lf == "remote":
+            results = [r for r in results if (r.get("work_type") or "").lower() == "remote" or "remote" in (r.get("location") or "").lower()]
+        elif lf == "ncr_onsite":
+            results = [r for r in results if (r.get("work_type") or "").lower() != "remote" and is_ncr_location(r.get("location"), r.get("work_type"))]
 
     # Dynamic sorting
     if sort_by == "recent":

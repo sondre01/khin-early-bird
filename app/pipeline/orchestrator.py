@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime
 from typing import List, Dict, Any, Callable, Optional
 from app.scrapers.aggregator import JobAggregator
@@ -9,7 +10,8 @@ from app.pipeline.link_validator import LinkValidator
 from app.database import (
     start_scrape_run, finish_scrape_run, save_job, save_evaluation, get_jobs
 )
-from app.config import USER_EMAIL
+from app.config import USER_EMAIL, DEFAULT_TARGET_LOCATION, FILTER_NCR_ONLY
+from app.utils.location import is_ncr_location
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class PipelineOrchestrator:
 
     def run(
         self,
-        location: str = "Philippines",
+        location: str = DEFAULT_TARGET_LOCATION,
         limit_per_keyword: int = 4,
         send_email: bool = True,
         progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None
@@ -92,6 +94,11 @@ class PipelineOrchestrator:
                 p_date = (cleaned.get("posted_date") or "").lower()
                 if any(w in p_date for w in ["month", "year", "4 week", "4 weeks"]) or re.search(r'([3-9]|\d{2,})\s*week', p_date):
                     logger.info(f"Discarded stale posting ({cleaned.get('posted_date')}): {cleaned['title']} @ {cleaned['company']}")
+                    continue
+
+                # Location Guard: Ensure opportunities are in NCR / Metro Manila or Remote
+                if FILTER_NCR_ONLY and not is_ncr_location(cleaned.get("location"), cleaned.get("work_type")):
+                    logger.info(f"Discarded non-NCR posting ({cleaned.get('location')}): {cleaned['title']} @ {cleaned['company']}")
                     continue
 
                 is_new = save_job(cleaned)

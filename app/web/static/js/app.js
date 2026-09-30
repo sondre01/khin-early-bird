@@ -139,7 +139,7 @@ async function loadStats() {
 
 async function loadTopJobsPreview() {
     try {
-        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80`);
+        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80&location=ncr`);
         const data = await res.json();
         const container = document.getElementById('dashboard-top-jobs');
         if (!container) return;
@@ -162,6 +162,7 @@ async function fetchJobs() {
     const source = document.getElementById('filter-source').value;
     const score = document.getElementById('filter-score').value;
     const status = document.getElementById('filter-status').value;
+    const location = document.getElementById('filter-location') ? document.getElementById('filter-location').value : 'ncr';
     const sortBy = document.getElementById('filter-sort') ? document.getElementById('filter-sort').value : 'recent';
     const hideApplied = document.getElementById('toggle-hide-applied') ? document.getElementById('toggle-hide-applied').checked : false;
     const posted = document.getElementById('filter-posted') ? document.getElementById('filter-posted').value : 'all';
@@ -170,6 +171,7 @@ async function fetchJobs() {
     let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}&sort_by=${encodeURIComponent(sortBy)}`;
     if (category !== 'all') url += `&role_category=${encodeURIComponent(category)}`;
     if (source !== 'all') url += `&source=${encodeURIComponent(source)}`;
+    if (location && location !== 'all') url += `&location=${encodeURIComponent(location)}`;
     if (score === 'triple') {
         url += `&min_validators=3`;
     } else if (score === 'dual') {

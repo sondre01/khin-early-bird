@@ -40,6 +40,8 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           USER_EMAIL: gamboa.khinandrei@gmail.com
           EMAIL_NOTIFICATIONS_ENABLED: "true"
+          FILTER_NCR_ONLY: "true"
+          DEFAULT_TARGET_LOCATION: "Metro Manila, Philippines"
         run: |
           python run_pipeline.py --limit 4
 

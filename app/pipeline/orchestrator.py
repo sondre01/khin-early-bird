@@ -8,7 +8,7 @@ from app.pipeline.ai_matcher import AIJobMatcher
 from app.pipeline.notifier import EmailNotifier
 from app.pipeline.link_validator import LinkValidator
 from app.database import (
-    start_scrape_run, finish_scrape_run, save_job, save_evaluation, get_jobs
+    start_scrape_run, finish_scrape_run, save_job, save_evaluation, get_jobs, mark_jobs_as_notified
 )
 from app.config import USER_EMAIL, DEFAULT_TARGET_LOCATION, FILTER_NCR_ONLY
 from app.utils.location import is_ncr_location
@@ -143,25 +143,36 @@ class PipelineOrchestrator:
             # ==========================================
             # PHASE 4: NOTIFICATION & DELIVERY
             # ==========================================
-            emit(4, "Delivery", "Generating responsive HTML digest and dispatching notification...", 90)
+            emit(4, "Delivery", "Checking for brand-new, unnotified opportunities to dispatch...", 90)
             
-            # Fetch top jobs to include in digest (excluding already applied or cancelled/dismissed jobs)
-            existing_statuses = {j["id"]: j.get("status", "new") for j in get_jobs(status="all", location_filter="all")}
-            active_evaluated = [
-                j for j in evaluated_jobs
-                if existing_statuses.get(j.get("id"), "new") not in ("applied", "dismissed")
-            ]
-            top_jobs = [j for j in active_evaluated if j.get("match_score", 0) >= 60]
-            if not top_jobs:
-                top_jobs = active_evaluated[:10]
+            # Fetch unnotified jobs from database (never emailed before, active, not applied, not dismissed)
+            unnotified_jobs = get_jobs(
+                unnotified_only=True,
+                hide_applied=True,
+                location_filter="all",
+                sort_by="score"
+            )
+            
+            # Prioritize qualified matches (>= 60)
+            qualified_unnotified = [j for j in unnotified_jobs if (j.get("match_score") or 0) >= 60]
+            if not qualified_unnotified and unnotified_jobs:
+                qualified_unnotified = unnotified_jobs[:10]
                 
+            # Limit digest to top 15 fresh items to keep email concise and impactful
+            dispatch_jobs = qualified_unnotified[:15]
+            
             email_sent = False
-            if send_email:
-                email_sent = self.notifier.send_digest(top_jobs, recipient=USER_EMAIL)
+            if not dispatch_jobs:
+                emit(4, "Delivery", "No new unnotified opportunities to dispatch today. Email skipped to prevent redundant inbox alerts.", 98)
+            elif send_email:
+                emit(4, "Delivery", f"Dispatching {len(dispatch_jobs)} fresh unnotified opportunities via email...", 92)
+                email_sent = self.notifier.send_digest(dispatch_jobs, recipient=USER_EMAIL)
                 if email_sent:
-                    emit(4, "Delivery", f"Email digest sent to {USER_EMAIL}!", 98)
+                    dispatched_ids = [j["id"] for j in dispatch_jobs if j.get("id")]
+                    mark_jobs_as_notified(dispatched_ids)
+                    emit(4, "Delivery", f"Email digest sent to {USER_EMAIL} and {len(dispatched_ids)} jobs marked as notified!", 98)
                 else:
-                    emit(4, "Delivery", "Generated local HTML digest snapshot at data/latest_digest.html (SMTP credentials pending).", 98)
+                    emit(4, "Delivery", f"Generated local HTML digest snapshot at data/latest_digest.html ({len(dispatch_jobs)} fresh roles).", 98)
 
             emit(4, "Delivery", "Pipeline run finished successfully!", 100)
 

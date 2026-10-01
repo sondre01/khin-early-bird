@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS public.jobs (
     apply_url TEXT,
     posted_date TEXT,
     extracted_at TEXT,
-    status TEXT DEFAULT 'new'
+    status TEXT DEFAULT 'new',
+    notified_at TEXT
 );
 
 -- 2. Evaluations Table

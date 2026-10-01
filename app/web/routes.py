@@ -334,8 +334,10 @@ async def api_preview_digest():
             content = f.read()
         return HTMLResponse(content=content)
     
-    # Generate on the fly from top jobs in database
-    jobs = get_jobs(min_score=60, limit=20)
+    # Generate on the fly from fresh unnotified jobs in database
+    jobs = get_jobs(unnotified_only=True, hide_applied=True, min_score=60, limit=15)
+    if not jobs:
+        jobs = get_jobs(hide_applied=True, min_score=60, limit=15)
     notifier = EmailNotifier()
     html = notifier.generate_html_digest(jobs)
     return HTMLResponse(content=html)

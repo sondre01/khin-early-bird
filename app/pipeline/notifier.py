@@ -116,17 +116,17 @@ class EmailNotifier:
         <!-- Minimalist Header -->
         <div style="background:#09090B;padding:28px 24px;color:#FFFFFF;">
             <div style="font-size:11px;font-family:monospace;letter-spacing:1px;text-transform:uppercase;color:#A1A1AA;margin-bottom:4px;">
-                KHIN EARLY BIRD &bull; DAILY DIGEST
+                KHIN EARLY BIRD &bull; FRESH OPPORTUNITIES DIGEST
             </div>
-            <h1 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#FFFFFF;">Curated Opportunities</h1>
-            <p style="margin:6px 0 0 0;font-size:12px;color:#A1A1AA;">Prepared for Khin Andrei Gamboa &bull; {now_str}</p>
+            <h1 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-0.5px;color:#FFFFFF;">⚡ Brand-New Matches</h1>
+            <p style="margin:6px 0 0 0;font-size:12px;color:#A1A1AA;">Prepared exclusively for Khin Andrei Gamboa &bull; {now_str} &bull; Never Emailed Before</p>
         </div>
 
         <!-- Subtle Stats Bar -->
         <div style="background:#F4F4F5;padding:12px 24px;border-bottom:1px solid #E4E4E7;display:flex;justify-content:space-between;text-align:center;">
             <div>
                 <div style="font-size:16px;font-weight:700;color:#09090B;">{len(jobs)}</div>
-                <div style="font-size:10px;color:#71717A;text-transform:uppercase;font-weight:600;">Analyzed</div>
+                <div style="font-size:10px;color:#71717A;text-transform:uppercase;font-weight:600;">Fresh Matches</div>
             </div>
             <div>
                 <div style="font-size:16px;font-weight:700;color:#09090B;">{len(internships)}</div>
@@ -140,6 +140,11 @@ class EmailNotifier:
 
         <!-- Content Area -->
         <div style="padding:24px;">
+
+            <!-- Zero Duplication Guarantee Notice -->
+            <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid #09090B;padding:12px 14px;border-radius:6px;margin-bottom:22px;font-size:12px;color:#475569;line-height:1.5;">
+                💡 <strong>Zero duplicates guaranteed:</strong> Only fresh postings you have not yet been emailed appear here. Older and previously delivered roles remain accessible anytime on your <a href="{self.base_url}" target="_blank" style="color:#09090B;font-weight:700;text-decoration:underline;">Early Bird Dashboard</a>.
+            </div>
 
             <!-- SECTION 1: INTERNSHIPS -->
             <div style="margin-bottom:28px;">
@@ -175,6 +180,10 @@ class EmailNotifier:
 
     def send_digest(self, jobs: List[Dict[str, Any]], recipient: str = USER_EMAIL) -> bool:
         """Generates digest, saves local copy, and sends via SMTP if configured"""
+        if not jobs:
+            logger.info("No unnotified opportunities to dispatch. Skipping email delivery.")
+            return False
+
         html_content = self.generate_html_digest(jobs)
         
         # Always persist latest digest HTML for instant dashboard preview
@@ -192,7 +201,7 @@ class EmailNotifier:
 
         try:
             msg = MIMEMultipart("alternative")
-            msg["Subject"] = f"🦅 Early Bird Job Matches ({len(jobs)} Opportunities) - {datetime.now().strftime('%b %d, %Y')}"
+            msg["Subject"] = f"⚡ Early Bird: {len(jobs)} Fresh Opportunities (Never Emailed) - {datetime.now().strftime('%b %d, %Y')}"
             msg["From"] = f"Khin Early Bird <{self.user}>"
             msg["To"] = recipient
 

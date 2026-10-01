@@ -11,6 +11,24 @@ let sseConnection = null;
 let statsLoaded = false;
 let jobsLoaded = false;
 let profileLoaded = false;
+let currentStatusView = 'active';
+
+function showToast(msg) {
+    let toast = document.getElementById('app-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'app-toast';
+        toast.className = 'fixed bottom-5 right-5 z-50 bg-[#16171B] border border-zinc-700 text-zinc-100 text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center space-x-2 transition-all duration-300 opacity-0 transform translate-y-2 pointer-events-none';
+        document.body.appendChild(toast);
+    }
+    toast.innerText = msg;
+    toast.classList.remove('opacity-0', 'translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+    setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+    }, 2800);
+}
 
 // URL Sanitizer & Platform Resolver (Prevents 404s like "We can't find this page")
 function getCleanApplyUrl(job) {
@@ -52,11 +70,150 @@ function getLinkedInSearchUrl(job) {
     return `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(cleanCompany + ' ' + cleanTitle)}&location=Philippines`;
 }
 
+const FILTER_STORAGE_KEY = 'khin_earlybird_filters_v2';
+const TAB_STORAGE_KEY = 'khin_earlybird_active_tab';
+
+function syncJobTypeButtons(type) {
+    document.querySelectorAll('.seg-btn').forEach(b => {
+        b.classList.remove('bg-white', 'text-black', 'shadow-xs');
+        b.classList.add('text-zinc-400');
+    });
+
+    const activeMap = {
+        'all': 'btn-seg-all',
+        'Internship': 'btn-seg-intern',
+        'Regular': 'btn-seg-regular'
+    };
+    const activeBtn = document.getElementById(activeMap[type]);
+    if (activeBtn) {
+        activeBtn.classList.add('bg-white', 'text-black', 'shadow-xs');
+        activeBtn.classList.remove('text-zinc-400');
+    }
+}
+
+function saveFilterState() {
+    try {
+        const state = {
+            jobType: currentFilterJobType || 'all',
+            statusView: currentStatusView || 'active',
+            search: document.getElementById('search-input')?.value || '',
+            category: document.getElementById('filter-category')?.value || 'all',
+            source: document.getElementById('filter-source')?.value || 'all',
+            location: document.getElementById('filter-location')?.value || 'ncr',
+            score: document.getElementById('filter-score')?.value || '0',
+            status: document.getElementById('filter-status')?.value || 'all',
+            hideApplied: document.getElementById('toggle-hide-applied') ? document.getElementById('toggle-hide-applied').checked : true,
+            posted: document.getElementById('filter-posted')?.value || 'all',
+            sort: document.getElementById('filter-sort')?.value || 'recent'
+        };
+        localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+        console.warn('Could not save filter state to localStorage:', e);
+    }
+}
+
+function restoreFilterState() {
+    try {
+        const raw = localStorage.getItem(FILTER_STORAGE_KEY);
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (!state || typeof state !== 'object') return;
+
+        // 1. Segregation Job Type
+        if (state.jobType) {
+            currentFilterJobType = state.jobType;
+            syncJobTypeButtons(state.jobType);
+        }
+
+        // 2. Feed Status View
+        if (state.statusView) {
+            currentStatusView = state.statusView;
+            syncStatusViewButtons(state.statusView);
+            const hintEl = document.getElementById('feed-status-hint');
+            if (hintEl) {
+                const hintMap = {
+                    'active': 'Showing unapplied opportunities (applied roles automatically archived)',
+                    'applied': 'Your application history (roles you have applied to)',
+                    'saved': 'Your bookmarked opportunities',
+                    'all': 'Showing all listings including applied and saved'
+                };
+                if (hintMap[state.statusView]) hintEl.innerText = hintMap[state.statusView];
+            }
+        }
+
+        // 3. Dropdowns & Inputs
+        if (state.search !== undefined && document.getElementById('search-input')) {
+            document.getElementById('search-input').value = state.search;
+        }
+        if (state.category && document.getElementById('filter-category')) {
+            document.getElementById('filter-category').value = state.category;
+        }
+        if (state.source && document.getElementById('filter-source')) {
+            document.getElementById('filter-source').value = state.source;
+        }
+        if (state.location && document.getElementById('filter-location')) {
+            document.getElementById('filter-location').value = state.location;
+        }
+        if (state.score && document.getElementById('filter-score')) {
+            document.getElementById('filter-score').value = state.score;
+        }
+        if (state.status && document.getElementById('filter-status')) {
+            document.getElementById('filter-status').value = state.status;
+        }
+        if (state.hideApplied !== undefined && document.getElementById('toggle-hide-applied')) {
+            document.getElementById('toggle-hide-applied').checked = Boolean(state.hideApplied);
+        }
+        if (state.posted && document.getElementById('filter-posted')) {
+            document.getElementById('filter-posted').value = state.posted;
+        }
+        if (state.sort && document.getElementById('filter-sort')) {
+            document.getElementById('filter-sort').value = state.sort;
+        }
+    } catch (e) {
+        console.warn('Could not restore filter state from localStorage:', e);
+    }
+}
+
+function setupFilterAutoSave() {
+    const filterIds = [
+        'filter-category',
+        'filter-source',
+        'filter-location',
+        'filter-score',
+        'filter-status',
+        'filter-posted',
+        'filter-sort',
+        'toggle-hide-applied'
+    ];
+    filterIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', () => {
+                saveFilterState();
+            });
+        }
+    });
+
+    const searchEl = document.getElementById('search-input');
+    if (searchEl) {
+        searchEl.addEventListener('input', () => {
+            saveFilterState();
+        });
+    }
+}
+
 function initApp() {
+    restoreFilterState();
+    setupFilterAutoSave();
     loadStats();
     fetchJobs();
     loadSettings();
     pollPipelineStatus();
+
+    const savedTab = localStorage.getItem(TAB_STORAGE_KEY);
+    if (savedTab && savedTab !== 'dashboard') {
+        switchTab(savedTab);
+    }
 }
 
 if (document.readyState === 'loading') {
@@ -82,6 +239,10 @@ function switchTab(tabId) {
         activeNav.classList.remove('text-zinc-400');
     }
 
+    try {
+        localStorage.setItem(TAB_STORAGE_KEY, tabId);
+    } catch (e) {}
+
     // Only load if not yet loaded; prevents harsh refetches & flickering when toggling tabs
     if (tabId === 'dashboard' && !statsLoaded) loadStats();
     if (tabId === 'jobs' && !jobsLoaded) fetchJobs();
@@ -99,6 +260,10 @@ async function loadStats() {
         document.getElementById('stat-high-matches').innerText = data.high_match_jobs || 0;
         document.getElementById('stat-internships').innerText = data.internships || 0;
         document.getElementById('stat-regular-jobs').innerText = data.regular_jobs || 0;
+
+        if (document.getElementById('badge-applied-count')) {
+            document.getElementById('badge-applied-count').innerText = data.applied_jobs || 0;
+        }
 
         // Source counts
         if (data.source_distribution) {
@@ -151,7 +316,7 @@ async function loadTopJobsPreview() {
         const container = document.getElementById('dashboard-top-jobs');
         if (!container) return;
 
-        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80&location=ncr`);
+        const res = await fetch(`${API_BASE}/api/jobs?limit=6&min_score=80&location=ncr&hide_applied=true`);
         const data = await res.json();
 
         if (!data.jobs || data.jobs.length === 0) {
@@ -170,15 +335,17 @@ async function loadTopJobsPreview() {
 
 // Jobs Query & Rendering
 async function fetchJobs() {
-    const category = document.getElementById('filter-category').value;
-    const source = document.getElementById('filter-source').value;
-    const score = document.getElementById('filter-score').value;
-    const status = document.getElementById('filter-status').value;
+    saveFilterState();
+
+    const category = document.getElementById('filter-category')?.value || 'all';
+    const source = document.getElementById('filter-source')?.value || 'all';
+    const score = document.getElementById('filter-score')?.value || '0';
+    const status = document.getElementById('filter-status')?.value || 'all';
     const location = document.getElementById('filter-location') ? document.getElementById('filter-location').value : 'ncr';
     const sortBy = document.getElementById('filter-sort') ? document.getElementById('filter-sort').value : 'recent';
-    const hideApplied = document.getElementById('toggle-hide-applied') ? document.getElementById('toggle-hide-applied').checked : false;
+    const hideApplied = document.getElementById('toggle-hide-applied') ? document.getElementById('toggle-hide-applied').checked : true;
     const posted = document.getElementById('filter-posted') ? document.getElementById('filter-posted').value : 'all';
-    const search = document.getElementById('search-input').value.trim();
+    const search = (document.getElementById('search-input')?.value || '').trim();
 
     let url = `${API_BASE}/api/jobs?job_type=${encodeURIComponent(currentFilterJobType)}&sort_by=${encodeURIComponent(sortBy)}`;
     if (category !== 'all') url += `&role_category=${encodeURIComponent(category)}`;
@@ -191,8 +358,12 @@ async function fetchJobs() {
     } else if (parseInt(score) > 0) {
         url += `&min_score=${encodeURIComponent(score)}`;
     }
-    if (status !== 'all') url += `&status=${encodeURIComponent(status)}`;
-    if (hideApplied) url += `&hide_applied=true`;
+    if (status === 'applied') {
+        url += `&status=applied`;
+    } else {
+        if (status !== 'all') url += `&status=${encodeURIComponent(status)}`;
+        if (hideApplied) url += `&hide_applied=true`;
+    }
     if (posted !== 'all') url += `&posted_within=${encodeURIComponent(posted)}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
 
@@ -246,13 +417,17 @@ function renderJobCard(job) {
     ).join('');
 
     const statusBadge = job.status === 'applied' 
-        ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 text-[10px] font-mono border border-zinc-700">✓ Applied</span>`
+        ? `<span class="px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-300 text-[10px] font-mono border border-emerald-800/80">✓ Applied</span>`
         : (job.status === 'saved' ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-mono border border-zinc-700">★ Saved</span>` 
         : (job.status === 'dismissed' ? `<span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 text-[10px] font-mono border border-zinc-800 line-through">Hidden</span>` : ''));
 
     const hideOrRestoreBtn = job.status === 'dismissed'
         ? `<button onclick="restoreJob(event, '${job.id}')" title="Restore Opportunity" class="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>`
         : `<button onclick="dismissJob(event, '${job.id}')" title="Hide / Cancel Out" class="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition"><i data-lucide="eye-off" class="w-4 h-4"></i></button>`;
+
+    const appliedCheckBtn = job.status === 'applied'
+        ? `<button onclick="unmarkApplied(event, '${job.id}')" title="Applied. Click to undo and restore to Active feed." class="p-1.5 rounded-lg text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 transition"><i data-lucide="check-circle-2" class="w-4 h-4"></i></button>`
+        : `<button onclick="handleApplyClick(event, '${job.id}')" title="Mark as Applied" class="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition"><i data-lucide="check-circle" class="w-4 h-4"></i></button>`;
 
     const vPassed = job.validators_passed !== undefined ? job.validators_passed : 0;
     const consensusBadge = vPassed >= 2 
@@ -273,9 +448,7 @@ function renderJobCard(job) {
                 </div>
                 <div class="flex items-center space-x-1">
                     ${scoreBadge}
-                    <button onclick="markApplied(event, '${job.id}')" title="${job.status === 'applied' ? 'Already Applied' : 'Mark as Applied'}" class="p-1.5 rounded-lg ${job.status === 'applied' ? 'text-white bg-zinc-800' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'} transition">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                    </button>
+                    ${appliedCheckBtn}
                     ${hideOrRestoreBtn}
                 </div>
             </div>
@@ -322,34 +495,93 @@ function renderJobCard(job) {
                 <a href="${getGoogleJobsUrl(job)}" target="_blank" rel="noopener noreferrer" title="Search on Google Jobs" class="text-zinc-500 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition text-[11px] font-mono">
                     Google
                 </a>
-                <a href="${getCleanApplyUrl(job)}" target="_blank" rel="noopener noreferrer" class="bg-white hover:bg-zinc-200 text-black text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1">
+                ${job.status === 'applied' ? `
+                <button onclick="unmarkApplied(event, '${job.id}')" title="Move back to Active Openings" class="text-zinc-400 hover:text-zinc-200 text-xs px-2.5 py-1.5 rounded-lg border border-zinc-800 hover:bg-zinc-800 transition">
+                    Undo
+                </button>
+                <a href="${getCleanApplyUrl(job)}" target="_blank" rel="noopener noreferrer" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1">
+                    <span>Re-visit</span>
+                    <span>&rarr;</span>
+                </a>
+                ` : `
+                <a href="${getCleanApplyUrl(job)}" target="_blank" rel="noopener noreferrer" onclick="handleApplyClick(event, '${job.id}')" class="bg-white hover:bg-zinc-200 text-black text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1">
                     <span>Apply</span>
                     <span>&rarr;</span>
                 </a>
+                `}
             </div>
         </div>
     </div>
     `;
 }
 
-// Segregation Filter Buttons
-function setJobTypeFilter(type) {
-    currentFilterJobType = type;
-    document.querySelectorAll('.seg-btn').forEach(b => {
+// Feed / Status View Filter (Active Openings, Applied History, Bookmarked, All)
+function setStatusView(view) {
+    currentStatusView = view;
+    syncStatusViewButtons(view);
+
+    const statusDropdown = document.getElementById('filter-status');
+    const hideAppliedCheckbox = document.getElementById('toggle-hide-applied');
+    const hintEl = document.getElementById('feed-status-hint');
+
+    if (view === 'active') {
+        if (statusDropdown) statusDropdown.value = 'all';
+        if (hideAppliedCheckbox) hideAppliedCheckbox.checked = true;
+        if (hintEl) hintEl.innerText = 'Showing unapplied opportunities (applied roles automatically archived)';
+    } else if (view === 'applied') {
+        if (statusDropdown) statusDropdown.value = 'applied';
+        if (hideAppliedCheckbox) hideAppliedCheckbox.checked = false;
+        if (hintEl) hintEl.innerText = 'Your application history (roles you have applied to)';
+    } else if (view === 'saved') {
+        if (statusDropdown) statusDropdown.value = 'saved';
+        if (hideAppliedCheckbox) hideAppliedCheckbox.checked = false;
+        if (hintEl) hintEl.innerText = 'Your bookmarked opportunities';
+    } else if (view === 'all') {
+        if (statusDropdown) statusDropdown.value = 'all';
+        if (hideAppliedCheckbox) hideAppliedCheckbox.checked = false;
+        if (hintEl) hintEl.innerText = 'Showing all listings including applied and saved';
+    }
+
+    saveFilterState();
+    fetchJobs();
+}
+
+function handleHideAppliedCheckboxChange() {
+    const isChecked = document.getElementById('toggle-hide-applied')?.checked ?? true;
+    if (!isChecked && currentStatusView === 'active') {
+        currentStatusView = 'all';
+        syncStatusViewButtons('all');
+    } else if (isChecked && currentStatusView === 'all') {
+        currentStatusView = 'active';
+        syncStatusViewButtons('active');
+    }
+    saveFilterState();
+    fetchJobs();
+}
+
+function syncStatusViewButtons(view) {
+    document.querySelectorAll('.status-view-btn').forEach(b => {
         b.classList.remove('bg-white', 'text-black', 'shadow-xs');
         b.classList.add('text-zinc-400');
     });
-
     const activeMap = {
-        'all': 'btn-seg-all',
-        'Internship': 'btn-seg-intern',
-        'Regular': 'btn-seg-regular'
+        'active': 'btn-view-active',
+        'applied': 'btn-view-applied',
+        'saved': 'btn-view-saved',
+        'all': 'btn-view-all'
     };
-    const activeBtn = document.getElementById(activeMap[type]);
+    const activeBtn = document.getElementById(activeMap[view]);
     if (activeBtn) {
         activeBtn.classList.add('bg-white', 'text-black', 'shadow-xs');
         activeBtn.classList.remove('text-zinc-400');
     }
+}
+
+// Segregation Filter Buttons
+function setJobTypeFilter(type) {
+    currentFilterJobType = type;
+    syncJobTypeButtons(type);
+    saveFilterState();
     fetchJobs();
 }
 
@@ -358,20 +590,50 @@ function filterByJobType(type) {
     setJobTypeFilter(type);
 }
 
+let searchDebounceTimer = null;
 function handleSearchKey(e) {
-    if (e.key === 'Enter') fetchJobs();
+    if (e.key === 'Enter') {
+        clearTimeout(searchDebounceTimer);
+        saveFilterState();
+        fetchJobs();
+        return;
+    }
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        saveFilterState();
+        fetchJobs();
+    }, 400);
 }
 
 function resetFilters() {
-    document.getElementById('filter-category').value = 'all';
-    document.getElementById('filter-source').value = 'all';
-    document.getElementById('filter-score').value = '0';
-    document.getElementById('filter-status').value = 'all';
+    try {
+        localStorage.removeItem(FILTER_STORAGE_KEY);
+    } catch (e) {}
+
+    if (document.getElementById('filter-category')) document.getElementById('filter-category').value = 'all';
+    if (document.getElementById('filter-source')) document.getElementById('filter-source').value = 'all';
+    if (document.getElementById('filter-score')) document.getElementById('filter-score').value = '0';
+    if (document.getElementById('filter-status')) document.getElementById('filter-status').value = 'all';
+    if (document.getElementById('filter-location')) document.getElementById('filter-location').value = 'ncr';
     if (document.getElementById('filter-posted')) document.getElementById('filter-posted').value = 'all';
-    if (document.getElementById('toggle-hide-applied')) document.getElementById('toggle-hide-applied').checked = false;
     if (document.getElementById('filter-sort')) document.getElementById('filter-sort').value = 'recent';
-    document.getElementById('search-input').value = '';
-    setJobTypeFilter('all');
+    if (document.getElementById('search-input')) document.getElementById('search-input').value = '';
+    
+    currentFilterJobType = 'all';
+    syncJobTypeButtons('all');
+
+    currentStatusView = 'active';
+    syncStatusViewButtons('active');
+
+    const toggleHideApplied = document.getElementById('toggle-hide-applied');
+    if (toggleHideApplied) toggleHideApplied.checked = true;
+
+    const hintEl = document.getElementById('feed-status-hint');
+    if (hintEl) hintEl.innerText = 'Showing unapplied opportunities (applied roles automatically archived)';
+
+    saveFilterState();
+    showToast('Filters reset to default');
+    fetchJobs();
 }
 
 // Job Modal
@@ -469,6 +731,10 @@ async function openJobModal(jobId) {
             `<span class="px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 text-[10px] font-mono border border-zinc-800">${s}</span>`
         ).join('') || '<span class="text-zinc-500">None identified</span>';
 
+        if (document.getElementById('modal-apply-btn-text')) {
+            document.getElementById('modal-apply-btn-text').innerText = (job.status === 'applied') ? 'Re-visit Posting' : 'Apply on Site';
+        }
+
         const modal = document.getElementById('job-modal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -501,19 +767,67 @@ async function toggleJobStatus(jobId, status) {
     }
 }
 
-async function markApplied(e, jobId) {
-    if (e) e.stopPropagation();
+async function handleApplyClick(e, jobId) {
+    const card = document.getElementById(`job-card-${jobId}`);
+    const hideApplied = document.getElementById('toggle-hide-applied') ? document.getElementById('toggle-hide-applied').checked : true;
+    const isFilteredActive = currentStatusView === 'active' || hideApplied;
+
+    if (card && isFilteredActive) {
+        card.style.transition = 'all 0.35s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            card.remove();
+            const container = document.getElementById('jobs-container');
+            if (container && container.children.length === 0) {
+                const emptyState = document.getElementById('jobs-empty');
+                if (emptyState) emptyState.classList.remove('hidden');
+            }
+        }, 350);
+    }
+
     try {
         await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({status: 'applied'})
         });
+        showToast('✓ Marked as Applied & moved to Application History');
+        loadStats();
+        if (!isFilteredActive) {
+            fetchJobs();
+        }
+    } catch (err) {
+        console.error('Error auto-marking applied:', err);
+    }
+}
+
+async function handleModalApplyClick(e) {
+    if (currentModalJobId) {
+        await handleApplyClick(null, currentModalJobId);
+        closeJobModal();
+    }
+}
+
+async function unmarkApplied(e, jobId) {
+    if (e) e.stopPropagation();
+    try {
+        await fetch(`${API_BASE}/api/jobs/${jobId}/status`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: 'new'})
+        });
+        showToast('Restored opportunity back to Active Openings');
         fetchJobs();
         loadStats();
     } catch (err) {
-        console.error('Error marking applied:', err);
+        console.error('Error unmarking applied:', err);
     }
+}
+
+async function markApplied(e, jobId) {
+    if (e) e.stopPropagation();
+    await handleApplyClick(e, jobId);
 }
 
 async function dismissJob(e, jobId) {

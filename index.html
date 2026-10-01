@@ -276,6 +276,31 @@
             <!-- Filter Bar -->
             <div class="bg-[#121316] p-5 rounded-2xl border border-zinc-800/90 shadow-xs space-y-4">
                 
+                <!-- Application View Segment: Active Openings vs Applied History vs Saved -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Feed:</span>
+                        <div class="inline-flex p-1 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium">
+                            <button onclick="setStatusView('active')" id="btn-view-active" class="status-view-btn px-3 py-1.5 rounded-lg bg-white text-black shadow-xs transition flex items-center space-x-1.5">
+                                <span>⚡ Active Openings</span>
+                            </button>
+                            <button onclick="setStatusView('applied')" id="btn-view-applied" class="status-view-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>✓ Applied History</span>
+                                <span id="badge-applied-count" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-zinc-800 text-zinc-300">0</span>
+                            </button>
+                            <button onclick="setStatusView('saved')" id="btn-view-saved" class="status-view-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>★ Bookmarked</span>
+                            </button>
+                            <button onclick="setStatusView('all')" id="btn-view-all" class="status-view-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>👁 All / History</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-[11px] text-zinc-500 font-mono hidden sm:block" id="feed-status-hint">
+                        Showing unapplied opportunities (applied roles automatically archived)
+                    </div>
+                </div>
+
                 <!-- Primary Segregation: Internships vs Regular -->
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
                     <div class="flex items-center space-x-2">
@@ -365,7 +390,7 @@
 
                     <!-- Quick Hide Applied Checkbox -->
                     <label class="flex items-center space-x-1.5 cursor-pointer bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 hover:bg-zinc-800 transition select-none">
-                        <input type="checkbox" id="toggle-hide-applied" onchange="fetchJobs()" class="rounded border-zinc-700 bg-zinc-900 text-white focus:ring-0">
+                        <input type="checkbox" id="toggle-hide-applied" checked onchange="handleHideAppliedCheckboxChange()" class="rounded border-zinc-700 bg-zinc-900 text-white focus:ring-0">
                         <span class="text-xs text-zinc-300">Hide Applied</span>
                     </label>
 
@@ -629,14 +654,15 @@
                         </h4>
                         <div class="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 space-y-2 text-xs">
                             <div class="flex items-center justify-between">
-                                <span class="font-semibold text-white">IT Admin & QA Intern</span>
+                                <span class="font-semibold text-white">IT Developer & Administrator Intern</span>
                                 <span class="text-[10px] font-mono text-zinc-400">Jan 2026 – June 2026</span>
                             </div>
                             <div class="text-xs text-zinc-300">Staff Domain</div>
                             <ul class="list-disc pl-4 space-y-1 text-zinc-400 text-[11px] leading-relaxed">
-                                <li>Asset inventory tracking & system optimization in Snipe-IT relational DB.</li>
-                                <li>PowerShell scripts for workstation diagnostics, Active Directory, Azure AD, and network tickets.</li>
-                                <li>Functional & regression QA testing for ITMS modules in Jira.</li>
+                                <li>Engineered modular automation tooling & CLI scripts in PowerShell to automate workstation configs and diagnostics.</li>
+                                <li>Migrated 20,000+ assets into Snipe-IT relational database structures with zero downtime, cutting provisioning latency by 80%.</li>
+                                <li>Integrated custom scripts with Active Directory and Azure AD / Microsoft Entra ID APIs for endpoint provisioning.</li>
+                                <li>Resolved Tier 1 & 2 tickets, configured enterprise VPNs (Tailscale, OpenVPN), and verified ITMS releases in Jira.</li>
                             </ul>
                         </div>
                     </div>
@@ -648,16 +674,21 @@
                         <i data-lucide="code-2" class="w-4 h-4 text-zinc-400"></i>
                         <span>Featured Projects in Profile</span>
                     </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
                         <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-1">
-                            <div class="font-semibold text-white">Four-in-One Vital Sign Sensor Kiosk with AI & IoT</div>
-                            <div class="text-[11px] font-mono text-zinc-400">Flask, MySQL, React.js, YOLOv11, XGBoost, Tailscale</div>
-                            <p class="text-zinc-400 text-[11px] leading-relaxed">Engineered 3-tier backend streaming real-time telemetry from 5 biomedical sensors; automated risk prediction.</p>
+                            <div class="font-semibold text-white">Web-Based Ticketing & Queue Analytics</div>
+                            <div class="text-[11px] font-mono text-zinc-400">Python, Flask, SQL, React.js, Vercel</div>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed">Full-stack support ticketing engine with RBAC and real-time analytics dashboards serving queries under 150ms.</p>
                         </div>
                         <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-1">
-                            <div class="font-semibold text-white">Social Media Analytics Automated ETL Pipeline</div>
+                            <div class="font-semibold text-white">Four-in-One Vital Sign Kiosk System</div>
+                            <div class="text-[11px] font-mono text-zinc-400">Flask, MySQL, React.js, YOLOv11, PyTest</div>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed">3-tier backend service streaming telemetry from 5 biomedical sensors; automated risk prediction.</p>
+                        </div>
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-1">
+                            <div class="font-semibold text-white">Social Media Analytics Automated ETL</div>
                             <div class="text-[11px] font-mono text-zinc-400">Python, PostgreSQL, Pandas, Docker, cron</div>
-                            <p class="text-zinc-400 text-[11px] leading-relaxed">Batch ingestion ETL pipeline with schema normalization and Docker deployments across 10,000+ records.</p>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed">End-to-end data validation and schema normalization across 10,000+ transaction batches in Docker.</p>
                         </div>
                     </div>
                 </div>
@@ -919,7 +950,7 @@
                     <a id="modal-linkedin-link" href="#" target="_blank" rel="noopener noreferrer" class="border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-mono text-xs px-3 py-2 rounded-xl transition flex items-center space-x-1.5" title="Search or apply on LinkedIn Philippines">
                         <span>💼 LinkedIn</span>
                     </a>
-                    <a id="modal-apply-link" href="#" target="_blank" rel="noopener noreferrer" class="bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center space-x-1.5">
+                    <a id="modal-apply-link" href="#" target="_blank" rel="noopener noreferrer" onclick="handleModalApplyClick(event)" class="bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center space-x-1.5">
                         <span id="modal-apply-btn-text">Apply on Site</span>
                         <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                     </a>

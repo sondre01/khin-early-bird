@@ -103,6 +103,7 @@ def supabase_get_jobs(
     posted_within: Optional[str] = None,
     sort_by: Optional[str] = "recent",
     location_filter: Optional[str] = "ncr",
+    unnotified_only: bool = False,
     limit: int = 500,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
@@ -129,6 +130,9 @@ def supabase_get_jobs(
 
         if hide_applied:
             query = query.neq("status", "applied")
+
+        if unnotified_only:
+            query = query.is_("notified_at", "null")
 
         if search:
             query = query.or_(f"title.ilike.%{search}%,company.ilike.%{search}%,description.ilike.%{search}%")
@@ -290,6 +294,25 @@ def supabase_update_job_status(job_id: str, status: str):
         client.table("jobs").update({"status": status}).eq("id", job_id).execute()
     except Exception as e:
         logger.error(f"Supabase update_job_status error: {e}")
+
+def supabase_mark_jobs_as_notified(job_ids: List[str]) -> bool:
+    """Marks a list of job IDs as notified in Supabase with current timestamp."""
+    client = get_supabase_client()
+    if not client or not job_ids:
+        return False
+    try:
+        now = datetime.now().isoformat()
+        try:
+            # Batch update via in_
+            client.table("jobs").update({"notified_at": now}).in_("id", job_ids).execute()
+        except Exception:
+            # Fallback to individual updates if in_ batch filter encounters limits
+            for jid in job_ids:
+                client.table("jobs").update({"notified_at": now}).eq("id", jid).execute()
+        return True
+    except Exception as e:
+        logger.error(f"Supabase mark_jobs_as_notified error: {e}")
+        return False
 
 def supabase_get_stats() -> Dict[str, Any]:
     client = get_supabase_client()

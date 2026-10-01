@@ -49,7 +49,12 @@ class JobAggregator:
         current_step = 0
 
         for scraper in self.scrapers:
+            consecutive_empty = 0
             for cat_key, kw, is_intern in search_tasks:
+                if consecutive_empty >= 3:
+                    current_step += 1
+                    continue
+
                 current_step += 1
                 msg = f"[{scraper.name}] Searching '{kw}' ({'Internship' if is_intern else 'Regular'})..."
                 if progress_callback:
@@ -57,6 +62,13 @@ class JobAggregator:
                 
                 try:
                     items = scraper.scrape(kw, location=location, limit=limit_per_keyword)
+                    if not items:
+                        consecutive_empty += 1
+                        if consecutive_empty >= 3:
+                            logger.info(f"[{scraper.name}] Repeated empty/challenged responses; bypassing remaining queries for {scraper.name}.")
+                    else:
+                        consecutive_empty = 0
+
                     for item in items:
                         # Ensure proper role category
                         if not item.role_category or item.role_category == "other":
@@ -68,6 +80,7 @@ class JobAggregator:
                         if item.id not in all_jobs:
                             all_jobs[item.id] = item
                 except Exception as e:
+                    consecutive_empty += 1
                     logger.warning(f"Error scraping {scraper.name} with '{kw}': {e}")
 
         final_list = list(all_jobs.values())

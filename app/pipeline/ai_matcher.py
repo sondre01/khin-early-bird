@@ -65,7 +65,7 @@ Return ONLY a valid JSON object matching this schema:
 """
         try:
             response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash-lite",
                 contents=prompt,
             )
             raw = response.text.strip()
@@ -80,10 +80,15 @@ Return ONLY a valid JSON object matching this schema:
                 "reasons": data.get("reasons", ["Matches candidate profile."]),
                 "matched_skills": data.get("matched_skills", []),
                 "missing_skills": data.get("missing_skills", []),
-                "model": "gemini-2.5-flash"
+                "model": "gemini-3.5-flash-lite"
             }
         except Exception as e:
-            logger.warning(f"Gemini call failed ({e}). Running simulated fallback.")
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
+                logger.info("Gemini free tier quota reached (429). Seamlessly switching to local qualification engine for remaining jobs.")
+            else:
+                logger.info(f"Gemini API unavailable ({err_msg[:80]}). Switching to local qualification engine.")
+            self.client = None
             return self._heuristic_fallback(job)
 
     def _heuristic_fallback(self, job: Dict[str, Any]) -> Dict[str, Any]:
@@ -147,16 +152,16 @@ class MLSkillVectorValidator:
 
         self.skill_clusters = {
             "Python & Backend": ["python", "flask", "fastapi", "django", "rest api", "backend"],
-            "SQL & Databases": ["sql", "mysql", "postgresql", "postgres", "snowflake", "database", "rdbms"],
-            "React & Frontend": ["react", "react.js", "frontend", "javascript", "typescript", "html", "css", "tailwind"],
+            "SQL & Databases": ["sql", "mysql", "postgresql", "postgres", "snowflake", "database", "rdbms", "supabase", "dbeaver"],
+            "React & Frontend": ["react", "react.js", "frontend", "javascript", "typescript", "html", "css", "tailwind", "ui/ux"],
             "Software Engineering": ["software", "developer", "engineer", "full stack", "coding", "oop", "c#", ".net", "java", "c++"],
             "Data Analytics & BI": ["power bi", "tableau", "data analyst", "business intelligence", "analytics", "visualization"],
             "Data Engineering": ["etl", "pipeline", "pandas", "data engineering", "data migration", "data warehouse"],
-            "Machine Learning / AI": ["machine learning", "xgboost", "yolo", "computer vision", "ai", "iot", "pytorch"],
-            "IT Support & Sysadmin": ["active directory", "azure ad", "snipe-it", "datto", "helpdesk", "desktop support", "technical support", "troubleshooting", "workstation"],
-            "Networking": ["tcp/ip", "dns", "dhcp", "vpn", "networking", "switch", "router", "lan/wan"],
-            "QA & Testing": ["qa", "quality assurance", "pytest", "jira", "regression", "test case", "testing", "bug tracking"],
-            "DevOps & Infrastructure": ["docker", "git", "github", "powershell", "bash", "linux", "vercel", "cloud"]
+            "Machine Learning / AI": ["machine learning", "xgboost", "yolo", "computer vision", "ai", "iot", "pytorch", "roboflow", "edge"],
+            "IT Support & Sysadmin": ["active directory", "azure ad", "entra id", "snipe-it", "datto", "helpdesk", "desktop support", "technical support", "troubleshooting", "workstation", "windows server", "linux", "ubuntu", "debian", "itsm", "service management"],
+            "Networking": ["tcp/ip", "dns", "dhcp", "vpn", "tailscale", "openvpn", "networking", "switch", "router", "lan/wan", "subnetting"],
+            "QA & Testing": ["qa", "quality assurance", "pytest", "postman", "jira", "regression", "test case", "testing", "bug tracking", "iso/iec 25010"],
+            "DevOps & Infrastructure": ["docker", "git", "github", "powershell", "bash", "linux", "vercel", "cloud", "ci/cd", "cron"]
         }
 
     def _tokenize(self, text: str) -> List[str]:

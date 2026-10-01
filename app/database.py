@@ -3,9 +3,12 @@ import sqlite3
 import json
 import shutil
 import re
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 from app.config import DB_PATH, PROJECT_ROOT
 from app.utils.location import is_ncr_location
 from app.utils.experience import is_fresh_grad_acceptable
@@ -152,6 +155,11 @@ def init_db():
             cursor.execute(f"ALTER TABLE evaluations ADD COLUMN {col_def[0]} {col_def[1]}")
         except Exception:
             pass
+
+    try:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN notified_at TEXT")
+    except Exception:
+        pass
     
     # Scrape Runs Table
     cursor.execute("""
@@ -292,6 +300,7 @@ def get_jobs(
     posted_within: Optional[str] = None,
     sort_by: Optional[str] = "recent",
     location_filter: Optional[str] = "ncr",
+    unnotified_only: bool = False,
     limit: int = 500,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
@@ -308,6 +317,7 @@ def get_jobs(
             posted_within=posted_within,
             sort_by=sort_by,
             location_filter=location_filter,
+            unnotified_only=unnotified_only,
             limit=limit,
             offset=offset
         )
@@ -370,6 +380,9 @@ def get_jobs(
         
     if hide_applied:
         query += " AND (j.status IS NULL OR j.status != 'applied')"
+
+    if unnotified_only:
+        query += " AND (j.notified_at IS NULL)"
         
     if search:
         search_pattern = f"%{search}%"
@@ -515,6 +528,28 @@ def update_job_status(job_id: str, status: str):
     cursor.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
     conn.commit()
     conn.close()
+
+def mark_jobs_as_notified(job_ids: List[str]) -> bool:
+    """Marks a list of job IDs as notified with the current timestamp so they won't be re-emailed."""
+    if not job_ids:
+        return False
+    if is_supabase_configured():
+        from app.supabase_client import supabase_mark_jobs_as_notified
+        return supabase_mark_jobs_as_notified(job_ids)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now().isoformat()
+    try:
+        placeholders = ",".join("?" for _ in job_ids)
+        cursor.execute(f"UPDATE jobs SET notified_at = ? WHERE id IN ({placeholders})", [now] + job_ids)
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error marking jobs as notified in SQLite: {e}")
+        return False
+    finally:
+        conn.close()
 
 def get_stats() -> Dict[str, Any]:
     if is_supabase_configured():

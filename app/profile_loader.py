@@ -19,72 +19,84 @@ STRUCTURED_PROFILE = {
         "institution": "Rizal Technological University (RTU)",
         "graduated": "July 2026",
         "honors": "Dean's List Academic Honor Awardee (CGWA: 1.73)",
-        "specialization": "Data Architecture, Embedded IoT Systems, Applied Machine Learning"
+        "specialization": "Software Systems, IT Infrastructure, Applied Machine Learning, and Data Architecture"
     },
     "certifications": [
-        "Associate Data Engineer | DataCamp (ID: DEA0017096233010)",
+        "Associate Data Engineer | DataCamp (ID: DEA0017096233010) - August 2026",
         "Associate Data Analyst | DataCamp",
-        "Data Fundamentals | IBM SkillsBuild & TESDA",
-        "Python Essentials 1 | Cisco Networking Academy & OpenEDG"
+        "Data Fundamentals | IBM SkillsBuild & TESDA - July 2026",
+        "Python Essentials 1 | Cisco Networking Academy & OpenEDG - July 2026"
     ],
     "work_experience": [
         {
-            "role": "IT Administrator and Operation / IT QA Intern",
+            "role": "IT Developer Intern & IT Administrator and Operation",
             "company": "Staff Domain",
             "period": "January 2026 - June 2026",
             "highlights": [
-                "Migrated 20,000+ hardware and software assets from unstandardized spreadsheets into Snipe-IT relational database, reducing provisioning latency by 80%",
-                "Executed functional QA testing, regression verification, and full bug lifecycle tracking for internal ITMS modules in Jira",
-                "Engineered modular automation scripts in PowerShell and CLI for workstation diagnostics and maintenance",
-                "Configured enterprise endpoints and identity access using Active Directory and Azure AD; resolved networking tickets across TCP/IP, DNS/DHCP, and VPN interfaces"
+                "Programmed modular automation tooling and CLI scripts in PowerShell to automate workstation configurations, environment setup, policy configuration, and routine systems diagnostics.",
+                "Developed automated ETL data migration scripts mapping 20,000+ unstandardized asset records into centralized Snipe-IT relational database structures with zero downtime, reducing provisioning latency by 80%.",
+                "Built and deployed custom scripting solutions interfacing with Active Directory and Azure AD / Microsoft Entra ID APIs, automating credential and endpoint provisioning workflows.",
+                "Streamlined end-to-end workstation onboarding by provisioning, installing operating systems, and deploying enterprise tools to guarantee day-one readiness for new personnel.",
+                "Diagnosed and resolved Tier-1 and Tier-2 hardware, software, and connectivity disruptions, maintaining high first-contact resolution; performed IP parameter configurations, ping tests, DNS/DHCP validation, and enterprise VPN support (Tailscale, OpenVPN).",
+                "Contributed to internal ITMS modules by debugging backend issues, writing regression scripts, and tracking full bug lifecycles in Jira, partnering with DevOps to validate release fixes."
             ]
         }
     ],
     "projects": [
         {
-            "title": "Four-in-One Vital Sign Sensor Kiosk with AI & IoT (Capstone)",
-            "tech": "Python, Flask, MySQL, React.js, YOLOv11, XGBoost, Tailscale VPN, PyTest",
-            "description": "3-tier backend service streaming telemetry from 5 biomedical sensors; automated risk assessment and posture compliance."
+            "title": "Web-Based Ticketing & Queue Analytics System",
+            "tech": "Python, Flask, SQL, JavaScript, React.js, Vercel",
+            "description": "Full-stack support ticketing engine featuring relational SQL storage, role-based access control (RBAC), and automated issue routing pipelines; engineered RESTful APIs in Flask serving real-time analytics payloads under 150ms, decreasing support triage latency by 40%."
+        },
+        {
+            "title": "Four-in-One Vital Sign Kiosk System with AI & IoT",
+            "tech": "Python, Flask, MySQL, React.js, Docker, PyTest, YOLOv11, XGBoost",
+            "description": "Architected a 3-tier backend service in Flask and designed relational MySQL schemas to ingest, index, and query health telemetry from 5 serial sensor streams with sub-second latency; engineered and deployed ML anomaly detection pipelines with responsive React.js UI/UX."
         },
         {
             "title": "Social Media Analytics Automated ETL Pipeline",
             "tech": "Python, PostgreSQL, Pandas, Docker, cron",
-            "description": "End-to-end data pipeline extracting multi-platform metrics, schema normalization, batch ingestion into PostgreSQL with Docker."
+            "description": "Engineered modular Python services to ingest and normalize external API payloads, ensuring error-handling resilience across 10,000+ transaction batches; containerized with Docker and scheduled execution with cron."
         },
         {
-            "title": "Web-Based Ticketing & Queue Analytics System",
-            "tech": "Python, Flask, SQL, JavaScript, Vercel",
-            "description": "Full-stack support ticketing engine with RBAC, automated issue routing, and real-time queue analytics dashboards."
+            "title": "AI Kilo Bot Embedded App",
+            "tech": "Python, Raspberry Pi, YOLO, Roboflow, Sensor Fusion",
+            "description": "Developed multi-threaded software integrating live camera feeds with strain-gauge telemetry for automated checkout transactions; optimized inference pipeline down to 65ms per cycle on edge hardware."
         },
         {
-            "title": "AI Kilo Bot",
-            "tech": "Python, Raspberry Pi, YOLO, Roboflow, HX711 Sensor Fusion",
-            "description": "Intelligent digital scale merging computer vision object classification with strain-gauge load-cell telemetry for automated item checkout."
+            "title": "Enterprise Telemetry Kiosk & Secure Networking",
+            "tech": "Tailscale Mesh VPN, Linux (Ubuntu/Debian), Python",
+            "description": "Architected and secured remote deployment telemetry communication across distributed endpoints utilizing Tailscale mesh VPN and encrypted protocols, maintaining continuous uptime across remote Linux terminals."
         }
     ],
     "skills": {
-        "programming": ["Python", "SQL", "JavaScript", "TypeScript", "C#", "Java", "C++", "Bash", "PowerShell", "HTML/CSS"],
-        "data_engineering_and_analytics": ["PostgreSQL", "MySQL", "Snowflake", "ETL/ELT Pipelines", "Pandas", "Power BI", "Tableau", "Query Optimization", "Schema Design"],
-        "machine_learning_ai": ["XGBoost", "YOLOv11", "Roboflow", "PyTorch", "Computer Vision", "Statistical Hypothesis Testing"],
-        "software_web_dev": ["React.js", "Flask", "Node.js", "REST APIs", "Docker", "Git/GitHub", "Vercel", "Supabase"],
-        "it_support_networking": ["Active Directory", "Azure AD", "Snipe-IT", "Datto RMM", "TCP/IP", "DNS/DHCP", "VPN Setup", "Windows/Linux/macOS Support", "Workstation Provisioning"],
-        "qa_testing": ["Functional QA Testing", "Regression Verification", "Jira Bug Lifecycle", "PyTest", "Test Case Documentation", "ISO/IEC 25010"]
+        "programming": ["Python", "JavaScript", "TypeScript", "SQL", "C#", "C++", "Java", "Bash", "PowerShell", "HTML/CSS"],
+        "full_stack_web_dev": ["Flask", "React.js", "Node.js", "RESTful APIs", "JSON", "Tailwind CSS", "Vercel", "Supabase"],
+        "databases_data_engineering": ["PostgreSQL", "MySQL", "Supabase", "Snowflake", "DBeaver", "ETL/ELT Pipelines", "Pandas", "Power BI", "Tableau", "Query Optimization", "Relational Modeling"],
+        "machine_learning_ai": ["XGBoost", "YOLOv11", "Roboflow", "PyTorch", "Computer Vision", "Statistical Hypothesis Testing", "Edge Inference", "Sensor Fusion"],
+        "systems_it_operations": ["Active Directory", "Azure AD / Entra ID", "Snipe-IT Asset Management", "Windows Server", "Linux (Ubuntu/Debian)", "Workstation Provisioning", "ITSM", "Jira Service Management"],
+        "networking_security": ["TCP/IP", "DNS/DHCP", "VPN Setup (Tailscale, OpenVPN)", "LAN/WAN Diagnostics", "Subnetting", "Ping Tests"],
+        "qa_devops_tooling": ["Functional QA Testing", "Regression Verification", "Jira Bug Lifecycle", "PyTest", "Postman", "Docker", "Git/GitHub", "CI/CD Pipelines", "ISO/IEC 25010"]
     }
 }
 
 
-def load_raw_resume_texts() -> Dict[str, str]:
-    """Reads all PDF resumes from documents/resume or loads from cache"""
-    if CACHE_FILE.exists():
+def load_raw_resume_texts(force_refresh: bool = False) -> Dict[str, str]:
+    """Reads all PDF resumes from documents/resume or loads from cache if up-to-date."""
+    if CACHE_FILE.exists() and not force_refresh:
         try:
-            with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+            cache_mtime = CACHE_FILE.stat().st_mtime
+            pdf_files = list(RESUME_DIR.glob("*.pdf")) if RESUME_DIR.exists() else []
+            # Cache is valid only if all resume PDFs are older than or equal to the cache timestamp
+            if pdf_files and all(p.stat().st_mtime <= cache_mtime for p in pdf_files):
+                with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
         except Exception as e:
             logger.warning(f"Failed to read cache {CACHE_FILE}: {e}")
 
     results = {}
     if RESUME_DIR.exists():
-        for pdf_path in RESUME_DIR.glob("*.pdf"):
+        for pdf_path in sorted(RESUME_DIR.glob("*.pdf")):
             try:
                 reader = pypdf.PdfReader(str(pdf_path))
                 text = "\n".join([page.extract_text() or "" for page in reader.pages])
@@ -96,6 +108,7 @@ def load_raw_resume_texts() -> Dict[str, str]:
         try:
             with open(CACHE_FILE, "w", encoding="utf-8") as f:
                 json.dump(results, f, ensure_ascii=False, indent=2)
+            logger.info(f"Successfully refreshed extracted resumes cache ({len(results)} files).")
         except Exception:
             pass
 

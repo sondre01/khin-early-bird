@@ -3,13 +3,14 @@ import sqlite3
 import json
 import shutil
 import re
+import secrets
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
-from app.config import DB_PATH, PROJECT_ROOT
+from app.config import DB_PATH, PROJECT_ROOT, TARGET_CATEGORIES
 from app.utils.location import is_ncr_location
 from app.utils.experience import is_fresh_grad_acceptable
 from app.supabase_client import (
@@ -92,13 +93,6 @@ def parse_posted_age_days(posted_str: Optional[str], extracted_at: Optional[str]
     return 999.0
     
 def init_db():
-    if is_supabase_configured():
-        try:
-            purge_ineligible_jobs()
-        except Exception:
-            pass
-        return
-
     conn = get_connection()
     cursor = conn.cursor()
     
@@ -182,8 +176,66 @@ def init_db():
         value TEXT
     )
     """)
+
+    # Users Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        full_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        is_verified INTEGER DEFAULT 0,
+        role TEXT DEFAULT 'user',
+        created_at TEXT NOT NULL,
+        last_login TEXT
+    )
+    """)
+
+    # Email Verifications Table (6-digit OTP codes)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS email_verifications (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL,
+        code TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        is_used INTEGER DEFAULT 0
+    )
+    """)
+
+    # User Preferences Table (Categories, Keywords, Locations, Platforms, Gemini Prompts)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_preferences (
+        user_id TEXT PRIMARY KEY,
+        target_categories TEXT DEFAULT '[]',
+        keywords TEXT DEFAULT '[]',
+        target_location TEXT DEFAULT 'Metro Manila, Philippines',
+        filter_ncr_only INTEGER DEFAULT 1,
+        job_types TEXT DEFAULT '["Regular", "Internship"]',
+        platforms TEXT DEFAULT '["indeed", "linkedin", "jobstreet"]',
+        daily_alert_enabled INTEGER DEFAULT 1,
+        alert_time TEXT DEFAULT '08:00',
+        gemini_prompt TEXT DEFAULT '',
+        gemini_recommendations TEXT DEFAULT '{}',
+        updated_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+    """)
+
+    # User Sessions Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_sessions (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+    """)
     
     conn.commit()
+    seed_default_user(conn)
     conn.close()
     
     try:
@@ -695,4 +747,391 @@ def purge_ineligible_jobs() -> Dict[str, Any]:
         "purged_count": len(purged),
         "purged_jobs": purged
     }
+
+
+# =====================================================================
+# USER AUTHENTICATION & PREFERENCES DATABASE OPS
+# =====================================================================
+
+def seed_default_user(conn: Optional[sqlite3.Connection] = None):
+    """
+    Seeds Khin Andrei Gamboa's default verified account and initial preferences.
+    Gmail: gamboa.khinandrei@gmail.com
+    Password: P@55w0rdKag!()
+    Username: khinag
+    """
+    should_close = False
+    if conn is None:
+        conn = get_connection()
+        should_close = True
+    cursor = conn.cursor()
+    try:
+        from app.auth import hash_password
+        default_email = "gamboa.khinandrei@gmail.com"
+        default_name = "Khin Andrei Gamboa"
+        default_user = "khinag"
+        default_pass = "P@55w0rdKag!()"
+        default_hash = hash_password(default_pass)
+        now = datetime.now().isoformat()
+
+        cursor.execute("SELECT id FROM users WHERE email = ? OR username = ?", (default_email, default_user))
+        row = cursor.fetchone()
+        if not row:
+            user_id = "user_khin_default"
+            cursor.execute("""
+            INSERT INTO users (id, email, username, full_name, password_hash, is_verified, role, created_at)
+            VALUES (?, ?, ?, ?, ?, 1, 'admin', ?)
+            """, (user_id, default_email, default_user, default_name, default_hash, now))
+        else:
+            user_id = row["id"]
+            # Always ensure verified and default credentials match
+            cursor.execute("""
+            UPDATE users SET password_hash = ?, is_verified = 1, username = ?, full_name = ?
+            WHERE id = ?
+            """, (default_hash, default_user, default_name, user_id))
+
+        # Check default preferences
+        cursor.execute("SELECT user_id FROM user_preferences WHERE user_id = ?", (user_id,))
+        if not cursor.fetchone():
+            default_cats = json.dumps(list(TARGET_CATEGORIES.keys()))
+            default_keywords = json.dumps([
+                "Junior Software Engineer", "Associate Software Engineer", "Fresh Graduate Software Engineer",
+                "Junior Python Developer", "Junior Web Developer", "Junior IT Support",
+                "Junior Data Analyst", "Junior Data Engineer", "Junior QA Tester"
+            ])
+            cursor.execute("""
+            INSERT INTO user_preferences (
+                user_id, target_categories, keywords, target_location, filter_ncr_only,
+                job_types, platforms, daily_alert_enabled, alert_time, gemini_prompt,
+                gemini_recommendations, updated_at
+            ) VALUES (?, ?, ?, ?, 1, ?, ?, 1, '08:00', ?, ?, ?)
+            """, (
+                user_id, default_cats, default_keywords, "Metro Manila, Philippines",
+                json.dumps(["Regular", "Internship"]),
+                json.dumps(["indeed", "linkedin", "jobstreet"]),
+                "Entry level software engineer and data analyst jobs for fresh graduate in NCR",
+                json.dumps({
+                    "recommendation_summary": "Default master profile configured for Khin Andrei Gamboa across Indeed, LinkedIn, and Jobstreet.",
+                    "platforms": ["indeed", "linkedin", "jobstreet"]
+                }),
+                now
+            ))
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Error seeding default user: {e}")
+    finally:
+        if should_close:
+            conn.close()
+
+
+def db_create_user(full_name: str, email: str, password: str, is_verified: bool = False, role: str = "user") -> Dict[str, Any]:
+    """Creates a new user record with auto-fixated username and default preferences."""
+    from app.auth import hash_password, generate_fixated_username
+    username = generate_fixated_username(full_name)
+    user_id = f"user_{secrets.token_hex(8)}"
+    pw_hash = hash_password(password)
+    now = datetime.now().isoformat()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Check existing email
+        cursor.execute("SELECT id FROM users WHERE LOWER(email) = ?", (email.lower().strip(),))
+        if cursor.fetchone():
+            raise ValueError(f"Email {email} is already registered.")
+
+        # Ensure unique username
+        base_username = username
+        counter = 1
+        while True:
+            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+            if not cursor.fetchone():
+                break
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        cursor.execute("""
+        INSERT INTO users (id, email, username, full_name, password_hash, is_verified, role, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, email.lower().strip(), username, full_name.strip(), pw_hash, 1 if is_verified else 0, role, now))
+
+        # Default preferences
+        default_cats = json.dumps(["software_engineering", "web_development"])
+        default_keywords = json.dumps(["Junior Software Engineer", "Associate Software Engineer", "Junior Web Developer"])
+        cursor.execute("""
+        INSERT INTO user_preferences (
+            user_id, target_categories, keywords, target_location, filter_ncr_only,
+            job_types, platforms, daily_alert_enabled, alert_time, updated_at
+        ) VALUES (?, ?, ?, 'Metro Manila, Philippines', 1, ?, ?, 1, '08:00', ?)
+        """, (
+            user_id, default_cats, default_keywords,
+            json.dumps(["Regular", "Internship"]),
+            json.dumps(["indeed", "linkedin", "jobstreet"]),
+            now
+        ))
+
+        conn.commit()
+        return {
+            "id": user_id,
+            "email": email.lower().strip(),
+            "username": username,
+            "full_name": full_name.strip(),
+            "is_verified": bool(is_verified),
+            "role": role,
+            "created_at": now
+        }
+    finally:
+        conn.close()
+
+
+def db_get_user_by_email_or_username(identifier: str) -> Optional[Dict[str, Any]]:
+    """Fetches user record by email or fixated username."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    ident = identifier.lower().strip()
+    try:
+        cursor.execute("""
+        SELECT id, email, username, full_name, password_hash, is_verified, role, created_at, last_login
+        FROM users
+        WHERE LOWER(email) = ? OR LOWER(username) = ?
+        """, (ident, ident))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+    finally:
+        conn.close()
+
+
+def db_get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    """Fetches user record by ID."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT id, email, username, full_name, password_hash, is_verified, role, created_at, last_login
+        FROM users WHERE id = ?
+        """, (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+    finally:
+        conn.close()
+
+
+def db_verify_user(email: str) -> bool:
+    """Marks a user as email verified."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE users SET is_verified = 1 WHERE LOWER(email) = ?", (email.lower().strip(),))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def db_create_verification_code(email: str, code: str, minutes_valid: int = 10) -> str:
+    """Stores a 6-digit OTP verification code."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    code_id = f"otp_{secrets.token_hex(8)}"
+    now = datetime.now()
+    expires_at = (now + timedelta(minutes=minutes_valid)).isoformat()
+    try:
+        cursor.execute("UPDATE email_verifications SET is_used = 1 WHERE LOWER(email) = ?", (email.lower().strip(),))
+        cursor.execute("""
+        INSERT INTO email_verifications (id, email, code, created_at, expires_at, is_used)
+        VALUES (?, ?, ?, ?, ?, 0)
+        """, (code_id, email.lower().strip(), code.strip(), now.isoformat(), expires_at))
+        conn.commit()
+        return code_id
+    finally:
+        conn.close()
+
+
+def db_verify_code(email: str, code: str) -> bool:
+    """Verifies a 6-digit OTP code and marks account verified upon match."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_iso = datetime.now().isoformat()
+    try:
+        cursor.execute("""
+        SELECT id FROM email_verifications
+        WHERE LOWER(email) = ? AND code = ? AND is_used = 0 AND expires_at >= ?
+        ORDER BY created_at DESC LIMIT 1
+        """, (email.lower().strip(), code.strip(), now_iso))
+        row = cursor.fetchone()
+        if row:
+            cursor.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (row["id"],))
+            cursor.execute("UPDATE users SET is_verified = 1 WHERE LOWER(email) = ?", (email.lower().strip(),))
+            conn.commit()
+            return True
+        return False
+    finally:
+        conn.close()
+
+
+def db_create_session(user_id: str, days_valid: int = 30) -> str:
+    """Generates and persists an authenticated user session token."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    token = secrets.token_urlsafe(32)
+    now = datetime.now()
+    expires_at = (now + timedelta(days=days_valid)).isoformat()
+    try:
+        cursor.execute("""
+        INSERT INTO user_sessions (token, user_id, created_at, expires_at)
+        VALUES (?, ?, ?, ?)
+        """, (token, user_id, now.isoformat(), expires_at))
+        cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", (now.isoformat(), user_id))
+        conn.commit()
+        return token
+    finally:
+        conn.close()
+
+
+def db_get_or_create_owner_session(user_id: str, days_valid: int = 30) -> str:
+    """Retrieves an existing valid session token for owner, or creates a new one only if none exists."""
+    if not user_id:
+        return ""
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_iso = datetime.now().isoformat()
+    try:
+        cursor.execute("""
+        SELECT token FROM user_sessions
+        WHERE user_id = ? AND expires_at >= ?
+        ORDER BY created_at DESC LIMIT 1
+        """, (user_id, now_iso))
+        row = cursor.fetchone()
+        if row and row["token"]:
+            return row["token"]
+    finally:
+        conn.close()
+    return db_create_session(user_id, days_valid=days_valid)
+
+
+def db_get_user_by_session(token: str) -> Optional[Dict[str, Any]]:
+    """Retrieves user profile associated with an active session token."""
+    if not token:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_iso = datetime.now().isoformat()
+    try:
+        cursor.execute("""
+        SELECT u.id, u.email, u.username, u.full_name, u.is_verified, u.role, u.created_at, u.last_login
+        FROM user_sessions s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.token = ? AND s.expires_at >= ?
+        """, (token, now_iso))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+    finally:
+        conn.close()
+
+
+def db_delete_session(token: str) -> bool:
+    """Invalidates an active user session token."""
+    if not token:
+        return False
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM user_sessions WHERE token = ?", (token,))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def db_get_user_preferences(user_id: str) -> Dict[str, Any]:
+    """Retrieves customizable scraping and alert preferences for a user."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM user_preferences WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {
+                "user_id": user_id,
+                "target_categories": ["software_engineering", "web_development"],
+                "keywords": ["Junior Software Engineer", "Associate Software Engineer"],
+                "target_location": "Metro Manila, Philippines",
+                "filter_ncr_only": True,
+                "job_types": ["Regular", "Internship"],
+                "platforms": ["indeed", "linkedin", "jobstreet"],
+                "daily_alert_enabled": True,
+                "alert_time": "08:00",
+                "gemini_prompt": "",
+                "gemini_recommendations": {}
+            }
+        data = dict(row)
+        for field, default in [
+            ("target_categories", ["software_engineering"]),
+            ("keywords", []),
+            ("job_types", ["Regular", "Internship"]),
+            ("platforms", ["indeed", "linkedin", "jobstreet"]),
+            ("gemini_recommendations", {})
+        ]:
+            try:
+                data[field] = json.loads(data.get(field) or ("{}" if isinstance(default, dict) else "[]"))
+            except Exception:
+                data[field] = default
+        data["filter_ncr_only"] = bool(data.get("filter_ncr_only", 1))
+        data["daily_alert_enabled"] = bool(data.get("daily_alert_enabled", 1))
+        return data
+    finally:
+        conn.close()
+
+
+def db_save_user_preferences(user_id: str, prefs: Dict[str, Any]) -> Dict[str, Any]:
+    """Saves customized scraping and notification preferences for a user."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    now = datetime.now().isoformat()
+    try:
+        target_cats = json.dumps(prefs.get("target_categories", []))
+        keywords = json.dumps(prefs.get("keywords", []))
+        job_types = json.dumps(prefs.get("job_types", ["Regular", "Internship"]))
+        platforms = json.dumps(prefs.get("platforms", ["indeed", "linkedin", "jobstreet"]))
+        gemini_recs = json.dumps(prefs.get("gemini_recommendations", {}))
+        target_location = prefs.get("target_location", "Metro Manila, Philippines")
+        filter_ncr_only = 1 if prefs.get("filter_ncr_only", True) else 0
+        daily_alert_enabled = 1 if prefs.get("daily_alert_enabled", True) else 0
+        alert_time = prefs.get("alert_time", "08:00")
+        gemini_prompt = prefs.get("gemini_prompt", "")
+
+        cursor.execute("""
+        INSERT INTO user_preferences (
+            user_id, target_categories, keywords, target_location, filter_ncr_only,
+            job_types, platforms, daily_alert_enabled, alert_time, gemini_prompt,
+            gemini_recommendations, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            target_categories=excluded.target_categories,
+            keywords=excluded.keywords,
+            target_location=excluded.target_location,
+            filter_ncr_only=excluded.filter_ncr_only,
+            job_types=excluded.job_types,
+            platforms=excluded.platforms,
+            daily_alert_enabled=excluded.daily_alert_enabled,
+            alert_time=excluded.alert_time,
+            gemini_prompt=excluded.gemini_prompt,
+            gemini_recommendations=excluded.gemini_recommendations,
+            updated_at=excluded.updated_at
+        """, (
+            user_id, target_cats, keywords, target_location, filter_ncr_only,
+            job_types, platforms, daily_alert_enabled, alert_time, gemini_prompt,
+            gemini_recs, now
+        ))
+        conn.commit()
+        return db_get_user_preferences(user_id)
+    finally:
+        conn.close()
+
 

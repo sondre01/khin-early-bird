@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.database import init_db
+from app.database import init_db, db_get_user_by_email_or_username, db_create_session, db_get_or_create_owner_session
 from app.scheduler import scheduler_instance
 from app.config import PROJECT_ROOT, APP_HOST, APP_PORT, AUTO_RUN_ON_STARTUP
 from app.web.routes import router as web_router
@@ -72,4 +72,12 @@ app.include_router(web_router)
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html")
+
+@app.get("/sondre04", response_class=HTMLResponse)
+@app.get("/sodre04", response_class=HTMLResponse)
+@app.get("/sondre04.html", response_class=HTMLResponse)
+@app.get("/sodre04.html", response_class=HTMLResponse)
+async def serve_sondre04(request: Request):
+    """Direct secret path access for account owner"""
     return templates.TemplateResponse(request=request, name="index.html")

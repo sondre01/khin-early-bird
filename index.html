@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Khin Early Bird | AI Job Hunt & Qualification Matcher</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -37,12 +40,300 @@
             70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
         }
+        .cover-page-sheet {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background-color: #090A0D;
+            transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 1.5s ease;
+            will-change: transform;
+            box-shadow: 0 40px 80px -10px rgba(0, 0, 0, 0.95);
+            transform: translateY(0);
+        }
+        .cover-page-sheet.lifted {
+            transform: translateY(-100%);
+            pointer-events: none;
+        }
+        /* Anti-flicker reload state: immediately suppresses cover page & unhides navbar when session is active */
+        html.session-active #cover-page-overlay {
+            transform: translateY(-100%) !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transition: none !important;
+        }
+        html.session-active #main-navbar {
+            display: block !important;
+        }
+        html.session-active #auth-portal-overlay {
+            display: none !important;
+        }
     </style>
+    <script>
+        (function() {
+            try {
+                const path = window.location.pathname.toLowerCase();
+                const isDirect = path.includes('/sondre04') ||
+                                 path.includes('/sodre04') ||
+                                 window.location.search.includes('sondre04');
+                const hasSession = sessionStorage.getItem('is_owner_session') === 'true' ||
+                                   sessionStorage.getItem('cover_page_lifted') === 'true' ||
+                                   (localStorage.getItem('visitor_auth_token') && !isDirect);
+                if (hasSession) {
+                    document.documentElement.classList.add('session-active');
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body class="h-full flex flex-col font-sans bg-[#090A0D] text-zinc-300 antialiased selection:bg-zinc-700 selection:text-white">
 
+    <!-- ========================================== -->
+    <!-- COVER PAGE OVERLAY (WELCOME HERO & LIFT-UP) -->
+    <!-- ========================================== -->
+    <div id="cover-page-overlay" onclick="handleCoverPageClick(event)" class="cover-page-sheet flex flex-col justify-between text-white select-none overflow-y-auto">
+        <!-- Subtle Ambient Background Glows -->
+        <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-b from-zinc-700/20 via-zinc-800/10 to-transparent blur-3xl pointer-events-none rounded-full"></div>
+        <div class="absolute -bottom-40 right-10 w-[400px] h-[300px] bg-emerald-500/5 blur-3xl pointer-events-none rounded-full"></div>
+
+        <!-- Top Header Bar on Cover -->
+        <div class="relative z-10 max-w-7xl w-full mx-auto p-6 md:p-8 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl shadow-lg">
+                    🦅
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-base tracking-tight text-white">Khin Early Bird</span>
+                        <span class="px-2 py-0.5 text-[10px] font-mono uppercase rounded-full bg-zinc-900 text-zinc-300 border border-zinc-700">Public Release</span>
+                    </div>
+                    <p class="text-xs text-zinc-400">Autonomous Overnight Application Discovery & AI Qualification Validator</p>
+                </div>
+            </div>
+            
+            <div class="hidden sm:flex items-center space-x-2 text-xs font-mono text-zinc-400 bg-zinc-900/80 px-3.5 py-1.5 rounded-xl border border-zinc-800">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active Platforms: Indeed &bull; LinkedIn &bull; Jobstreet</span>
+            </div>
+        </div>
+
+        <!-- Center Welcoming Hero -->
+        <div class="relative z-10 max-w-4xl mx-auto px-6 py-4 text-center space-y-6">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-mono text-zinc-300 shadow-sm">
+                <span class="text-amber-400">⚡</span>
+                <span>Priority Indexing for Fresh Overnight Job Listings</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
+                Find Your Preferred Job <br>
+                <span class="bg-gradient-to-r from-white via-zinc-300 to-zinc-500 bg-clip-text text-transparent">Before Everyone Else</span>
+            </h1>
+
+            <p class="text-sm sm:text-base md:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+                Welcome to <strong>Khin Early Bird</strong>. Tailored to help every job seeker discover their target role and location. Indexes fresh overnight postings across <strong>Indeed</strong>, <strong>LinkedIn</strong>, and <strong>Jobstreet</strong>, evaluated with <strong>Gemini AI</strong> and dispatched every morning at <strong>8:00 AM</strong>.
+            </p>
+
+            <!-- Feature Badges -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4 text-left max-w-2xl mx-auto text-xs">
+                <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+                    <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">01 / Priority Ingestion</div>
+                    <div class="font-semibold text-white">Overnight Tri-Platform Scraping</div>
+                    <div class="text-zinc-400 text-[11px] mt-1 leading-normal">Prioritizes earliest job applications across Indeed, LinkedIn, & Jobstreet.</div>
+                </div>
+                <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+                    <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">02 / Gemini AI Setup</div>
+                    <div class="font-semibold text-white">Smart Preference Engine</div>
+                    <div class="text-zinc-400 text-[11px] mt-1 leading-normal">Write what you want or select suggestions; Gemini AI tailors your setup.</div>
+                </div>
+                <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+                    <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">03 / Morning Briefing</div>
+                    <div class="font-semibold text-white">Daily 8:00 AM Gmail Dispatch</div>
+                    <div class="text-zinc-400 text-[11px] mt-1 leading-normal">Verified Gmail authentication delivers fresh, un-emailed opportunities.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signaling Arrow: Tap Screen to Enter -->
+        <div class="relative z-10 pb-8 flex flex-col items-center justify-center cursor-pointer group">
+            <div class="text-xs uppercase tracking-widest font-mono text-zinc-400 group-hover:text-white transition-all flex items-center space-x-2 mb-2">
+                <span>Tap screen to enter</span>
+            </div>
+            <div class="w-12 h-12 rounded-full border border-zinc-700 bg-zinc-900/90 flex items-center justify-center text-white shadow-2xl group-hover:border-zinc-400 group-hover:scale-110 transition-all animate-bounce">
+                <svg class="w-5 h-5 text-zinc-200 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- AUTHENTICATION PORTAL (SIGN IN / SIGN UP) -->
+    <!-- ========================================== -->
+    <div id="auth-portal-overlay" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-[#090A0D]/95 backdrop-blur-md overflow-y-auto transition-opacity duration-300">
+        <div class="max-w-md w-full bg-[#121316] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-6">
+            <!-- Auth Header -->
+            <div class="p-6 border-b border-zinc-800/80 bg-zinc-900/40 text-center relative">
+                <button onclick="lowerCoverPage()" class="absolute left-4 top-4 text-xs font-mono text-zinc-500 hover:text-white transition flex items-center space-x-1" title="View welcome screen">
+                    <span>&uarr; Cover</span>
+                </button>
+                <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl mx-auto mb-2 shadow-sm">🦅</div>
+                <h2 class="text-lg font-bold text-white tracking-tight">Khin Early Bird</h2>
+                <p class="text-xs text-zinc-400 mt-0.5">Autonomous Job Ingestion & Notification Portal</p>
+                
+                <!-- Toggle Tabs: Sign In / Sign Up -->
+                <div class="flex bg-zinc-900/90 p-1 rounded-xl border border-zinc-800 text-xs font-medium mt-4">
+                    <button id="auth-tab-signin" onclick="switchAuthTab('signin')" class="flex-1 py-1.5 rounded-lg text-black bg-white shadow-xs transition font-semibold">
+                        Sign In
+                    </button>
+                    <button id="auth-tab-signup" onclick="switchAuthTab('signup')" class="flex-1 py-1.5 rounded-lg text-zinc-400 hover:text-white transition font-medium">
+                        Create Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content: SIGN IN -->
+            <div id="auth-form-signin" class="p-6 space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Email or Fixated Username</label>
+                    <input type="text" id="signin-identifier" placeholder="gamboa.khinandrei@gmail.com or khinag" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Password</label>
+                        <button type="button" onclick="togglePasswordVisibility('signin-password')" class="text-[10px] text-zinc-500 hover:text-zinc-300">Show/Hide</button>
+                    </div>
+                    <input type="password" id="signin-password" placeholder="Enter your password" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                </div>
+
+                <div id="signin-error" class="hidden p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs"></div>
+
+                <button onclick="handleSignIn()" id="btn-submit-signin" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center space-x-2">
+                    <span>Sign In to Dashboard &rarr;</span>
+                </button>
+            </div>
+
+            <!-- Tab Content: SIGN UP -->
+            <div id="auth-form-signup" class="p-6 space-y-4 hidden">
+                <!-- STEP 1: Basic Info -->
+                <div id="signup-step-1" class="space-y-3.5">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Full Name</label>
+                        <input type="text" id="signup-fullname" oninput="handleFullNameInput(this.value)" placeholder="e.g. Khin Andrei Gamboa" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                    </div>
+
+                    <!-- Fixated Username Live Preview Box -->
+                    <div class="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 text-left space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono uppercase text-zinc-500">Fixated Username Format</span>
+                            <span id="signup-username-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-zinc-800 text-white border border-zinc-700">@username</span>
+                        </div>
+                        <p class="text-[11px] text-zinc-400 leading-normal">
+                            Computed from first name + initials of next names (e.g. <strong class="text-zinc-300">Khin Andrei Gamboa</strong> &rarr; <strong class="text-zinc-200">@khinag</strong>).
+                        </p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Gmail / Email Address</label>
+                        <input type="email" id="signup-email" placeholder="your.name@gmail.com" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                        <p class="text-[10px] text-zinc-500">Used for daily 8:00 AM morning job application alerts.</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Password</label>
+                        <input type="password" id="signup-password" placeholder="Choose a password (min 6 chars)" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                    </div>
+
+                    <div id="signup-error" class="hidden p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs"></div>
+
+                    <button onclick="handleSendVerificationCode()" id="btn-send-code" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center space-x-2">
+                        <span>Send Gmail Verification Code &rarr;</span>
+                    </button>
+                </div>
+
+                <!-- STEP 2: OTP Verification -->
+                <div id="signup-step-2" class="space-y-4 hidden">
+                    <div class="text-center space-y-1">
+                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800 text-amber-400 text-sm mb-1">🔐</div>
+                        <h3 class="text-sm font-bold text-white">Gmail Authentication</h3>
+                        <p class="text-xs text-zinc-400">
+                            Enter the 6-digit verification code sent to <br>
+                            <strong class="text-white font-mono" id="otp-target-email"></strong>
+                        </p>
+                    </div>
+
+                    <div class="space-y-1.5 text-center">
+                        <input type="text" id="signup-otp-code" maxlength="6" placeholder="------" class="w-48 mx-auto text-center font-mono font-bold tracking-[8px] text-xl bg-[#090A0D] border border-zinc-700 rounded-xl py-2.5 text-white focus:outline-none focus:border-white transition">
+                        <p class="text-[10px] text-zinc-500">Code is valid for 10 minutes.</p>
+                    </div>
+
+                    <div id="otp-error" class="hidden p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs text-center"></div>
+
+                    <button onclick="handleVerifyCode()" id="btn-verify-otp" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center space-x-2">
+                        <span>Verify & Continue &rarr;</span>
+                    </button>
+
+                    <div class="flex items-center justify-between text-xs text-zinc-400 pt-1">
+                        <button onclick="resendOtpCode()" id="btn-resend-otp" class="hover:text-white underline">Resend Code</button>
+                        <button onclick="returnToSignupStep1()" class="hover:text-white">Edit Info</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Gemini Preference Onboarding -->
+                <div id="signup-step-3" class="space-y-3.5 hidden">
+                    <div class="text-center space-y-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-300 border border-zinc-700">AI Powered</span>
+                        <h3 class="text-sm font-bold text-white">Setup Scraping Preferences</h3>
+                        <p class="text-[11px] text-zinc-400 leading-normal">
+                            Write what you want or select a suggested path, and Gemini AI will formulate the optimal search filters for you.
+                        </p>
+                    </div>
+
+                    <!-- Prompt input area -->
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-mono uppercase text-zinc-500">Your Goals or Dream Setup (Freeform)</label>
+                        <textarea id="onboarding-gemini-prompt" rows="3" placeholder="e.g. Fresh BS Computer Engineering grad looking for junior software engineer or python roles in Pasig or Makati, hybrid or remote..." class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 custom-scrollbar"></textarea>
+                    </div>
+
+                    <!-- Quick Prompt Suggestions Chips -->
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="fillOnboardingPrompt('Fresh graduate software engineer specializing in Python, SQL, and React, open to Metro Manila & remote')" class="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 px-2 py-1 rounded-md transition">
+                            🎓 Software Eng
+                        </button>
+                        <button type="button" onclick="fillOnboardingPrompt('Junior Data Analyst and Data Engineer with SQL and ETL skills in NCR')" class="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 px-2 py-1 rounded-md transition">
+                            📊 Data Analytics
+                        </button>
+                        <button type="button" onclick="fillOnboardingPrompt('Entry level IT tech support and network operations specialist in Metro Manila')" class="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 px-2 py-1 rounded-md transition">
+                            🛠️ IT Support
+                        </button>
+                    </div>
+
+                    <button type="button" onclick="runOnboardingGeminiAdvisor()" id="btn-onboarding-gemini" class="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2">
+                        <span>🤖 Auto-Configure with Gemini AI</span>
+                    </button>
+
+                    <!-- Preview of Configured Preferences -->
+                    <div id="onboarding-prefs-preview" class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs space-y-2 text-zinc-300">
+                        <div id="onboarding-gemini-summary" class="text-[11px] text-zinc-400 italic">
+                            Default configuration loaded. Click Gemini AI above to auto-tune based on your prompt.
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                            <div>Categories: <strong class="text-white" id="onboarding-cats-count">2 selected</strong></div>
+                            <div>Location: <strong class="text-white" id="onboarding-loc-val">Metro Manila</strong></div>
+                            <div>Alerts: <strong class="text-emerald-400">8:00 AM Daily</strong></div>
+                            <div>Priority: <strong class="text-white">Indeed &bull; LinkedIn &bull; Jobstreet</strong></div>
+                        </div>
+                    </div>
+
+                    <button onclick="finishOnboardingAndEnterDashboard()" id="btn-finish-onboarding" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center space-x-2">
+                        <span>Save & Enter My Dashboard &rarr;</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Navigation Bar -->
-    <header class="bg-[#0E0F12] border-b border-zinc-800/90 text-zinc-100 sticky top-0 z-40">
+    <header id="main-navbar" class="hidden bg-[#0E0F12] border-b border-zinc-800/90 text-zinc-100 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo & Subtitle -->
@@ -55,7 +346,7 @@
                             <span class="font-bold text-base tracking-tight text-white">Khin Early Bird</span>
                             <span class="px-2 py-0.5 text-[10px] font-mono uppercase rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">AI Agent</span>
                         </div>
-                        <p class="text-xs text-zinc-500">Job Ingestion & Qualification Validation for <strong>Khin Andrei Gamboa</strong></p>
+                        <p class="text-xs text-zinc-500">Job Ingestion & Qualification Validation for <strong id="header-user-display-name">Khin Andrei Gamboa</strong></p>
                     </div>
                 </div>
 
@@ -79,16 +370,47 @@
                 </nav>
 
                 <!-- Actions -->
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2.5">
                     <div class="hidden lg:flex items-center space-x-2 text-xs font-mono text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800">
                         <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                         <span>Daily Run: <strong class="text-zinc-200" id="header-schedule-time">08:00 AM</strong></span>
                     </div>
 
-                    <button onclick="triggerPipelineRun()" id="btn-run-pipeline" class="flex items-center space-x-2 bg-white hover:bg-zinc-200 text-black px-3.5 py-1.5 rounded-xl font-semibold text-xs shadow-xs transition transform active:scale-95">
+                    <button onclick="triggerPipelineRun()" id="btn-run-pipeline" class="flex items-center space-x-2 bg-white hover:bg-zinc-200 text-black px-3 py-1.5 rounded-xl font-semibold text-xs shadow-xs transition transform active:scale-95">
                         <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
-                        <span>Run Scraper Now</span>
+                        <span class="hidden sm:inline">Run Scraper</span>
                     </button>
+
+                    <!-- User Profile & Action Dropdown -->
+                    <div class="flex items-center space-x-2 border-l border-zinc-800 pl-2.5">
+                        <button onclick="openPreferencesModal()" class="hidden md:flex items-center space-x-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-zinc-800 transition" title="Customize AI Scraping Parameters">
+                            <span>✨ Preferences</span>
+                        </button>
+
+                        <div class="relative group">
+                            <button id="header-user-btn" class="flex items-center space-x-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1.5 rounded-xl text-xs transition">
+                                <span class="w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-white" id="header-user-avatar">K</span>
+                                <span class="font-mono text-zinc-200 hidden sm:inline" id="header-user-handle">@khinag</span>
+                            </button>
+                            
+                            <div class="absolute right-0 mt-2 w-48 bg-[#141518] border border-zinc-800 rounded-xl shadow-2xl py-1 hidden group-hover:block hover:block z-50">
+                                <div class="px-3 py-2 border-b border-zinc-800/80">
+                                    <div class="text-xs font-semibold text-white truncate" id="header-dropdown-name">Khin Andrei Gamboa</div>
+                                    <div class="text-[10px] text-zinc-400 font-mono truncate" id="header-dropdown-email">gamboa.khinandrei@gmail.com</div>
+                                </div>
+                                <button onclick="openPreferencesModal()" class="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 flex items-center space-x-2">
+                                    <span>✨ AI Preferences</span>
+                                </button>
+                                <button onclick="lowerCoverPage()" class="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 flex items-center space-x-2">
+                                    <span>🦅 Welcome Screen</span>
+                                </button>
+                                <div class="border-t border-zinc-800/80 my-1"></div>
+                                <button onclick="handleSignOut()" class="w-full text-left px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-950/30 flex items-center space-x-2">
+                                    <span>Sign Out</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -959,8 +1281,119 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- PREFERENCES & GEMINI ADVISOR MODAL -->
+    <!-- ========================================== -->
+    <div id="preferences-modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden overflow-y-auto">
+        <div class="max-w-xl w-full bg-[#121316] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-8">
+            <div class="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/40">
+                <div class="flex items-center space-x-2">
+                    <span class="text-lg">⚙️</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Scraping & Alert Preferences</h3>
+                        <p class="text-xs text-zinc-400">Customizable settings powered by Google Gemini AI</p>
+                    </div>
+                </div>
+                <button onclick="closePreferencesModal()" class="text-zinc-500 hover:text-white p-1 rounded-lg">✕</button>
+            </div>
+
+            <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <!-- Gemini Prompt Box -->
+                <div class="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white flex items-center space-x-1.5">
+                            <span>🤖 Gemini AI Setup Assistant</span>
+                        </span>
+                        <span class="text-[10px] font-mono text-zinc-400">gemini-2.5-flash</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-400 leading-normal">
+                        Type what roles, locations, or priority you want, and Gemini will automatically configure and optimize your scraping parameters.
+                    </p>
+                    <textarea id="modal-gemini-prompt" rows="2" placeholder="e.g. I want associate software engineering and backend roles in Pasig or BGC with Python, prioritize fresh overnight postings..." class="w-full bg-[#090A0D] border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500"></textarea>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex flex-wrap gap-1">
+                            <button type="button" onclick="fillModalPrompt('Software Engineering and React in Metro Manila')" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded">💻 Software</button>
+                            <button type="button" onclick="fillModalPrompt('Junior Data Analyst and SQL roles in NCR')" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded">📊 Data</button>
+                            <button type="button" onclick="fillModalPrompt('IT Tech Support and Operations in Manila')" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded">🛠️ IT</button>
+                        </div>
+                        <button type="button" onclick="runModalGeminiAdvisor()" id="btn-modal-gemini" class="bg-white hover:bg-zinc-200 text-black px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                            Run AI Advisor
+                        </button>
+                    </div>
+
+                    <div id="modal-gemini-feedback" class="hidden p-2.5 rounded-lg bg-zinc-800/80 border border-zinc-700 text-xs text-zinc-200"></div>
+                </div>
+
+                <!-- Role Categories Selection -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Target Role Categories</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs" id="pref-categories-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Custom Search Keywords -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Precision Search Keywords (Comma-Separated)</label>
+                    <input type="text" id="pref-keywords" placeholder="Junior Software Engineer, Associate Developer..." class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
+                </div>
+
+                <!-- Target Location & NCR Only Toggle -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Target Location</label>
+                        <input type="text" id="pref-location" value="Metro Manila, Philippines" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
+                    </div>
+                    <div class="flex items-center space-x-2 pt-6">
+                        <input type="checkbox" id="pref-ncr-only" class="w-4 h-4 rounded bg-zinc-900 border-zinc-700 accent-white">
+                        <label for="pref-ncr-only" class="text-xs text-zinc-300">Restrict to NCR / Metro Manila & Remote</label>
+                    </div>
+                </div>
+
+                <!-- Platforms Priority -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Priority Platforms (Tri-Platform Scraper)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="flex items-center space-x-2 p-2.5 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer">
+                            <input type="checkbox" id="pref-plat-indeed" checked class="accent-white">
+                            <span>Indeed PH</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2.5 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer">
+                            <input type="checkbox" id="pref-plat-linkedin" checked class="accent-white">
+                            <span>LinkedIn</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2.5 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer">
+                            <input type="checkbox" id="pref-plat-jobstreet" checked class="accent-white">
+                            <span>Jobstreet</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Daily Morning Notification -->
+                <div class="p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-white">Daily 8:00 AM Morning Job Digest</div>
+                        <div class="text-[11px] text-zinc-400">Delivers fresh unnotified postings to your verified Gmail daily</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="pref-daily-alert" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
+                <button onclick="closePreferencesModal()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg border border-zinc-800">Cancel</button>
+                <button onclick="saveModalPreferences()" id="btn-save-prefs" class="bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl text-xs font-semibold transition">
+                    Save Preferences
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Frontend JS logic -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=2.1"></script>
     <script>
         lucide.createIcons();
     </script>

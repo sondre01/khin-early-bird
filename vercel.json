@@ -9,7 +9,8 @@
           "data/**",
           "app/**",
           "documents/**",
-          "index.html"
+          "index.html",
+          "sondre04/**"
         ]
       }
     }

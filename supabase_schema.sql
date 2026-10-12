@@ -58,6 +58,53 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
     value TEXT
 );
 
+-- 5. Users Table
+CREATE TABLE IF NOT EXISTS public.users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    full_name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
+    role TEXT DEFAULT 'user',
+    created_at TEXT NOT NULL,
+    last_login TEXT
+);
+
+-- 6. Email Verifications Table
+CREATE TABLE IF NOT EXISTS public.email_verifications (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE
+);
+
+-- 7. User Preferences Table
+CREATE TABLE IF NOT EXISTS public.user_preferences (
+    user_id TEXT PRIMARY KEY REFERENCES public.users (id) ON DELETE CASCADE,
+    target_categories TEXT DEFAULT '[]',
+    keywords TEXT DEFAULT '[]',
+    target_location TEXT DEFAULT 'Metro Manila, Philippines',
+    filter_ncr_only BOOLEAN DEFAULT TRUE,
+    job_types TEXT DEFAULT '["Regular", "Internship"]',
+    platforms TEXT DEFAULT '["indeed", "linkedin", "jobstreet"]',
+    daily_alert_enabled BOOLEAN DEFAULT TRUE,
+    alert_time TEXT DEFAULT '08:00',
+    gemini_prompt TEXT DEFAULT '',
+    gemini_recommendations TEXT DEFAULT '{}',
+    updated_at TEXT
+);
+
+-- 8. User Sessions Table
+CREATE TABLE IF NOT EXISTS public.user_sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
+
 -- Indexes for lightning fast queries & filtering
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON public.jobs (status);
 CREATE INDEX IF NOT EXISTS idx_jobs_job_type ON public.jobs (job_type);
@@ -65,12 +112,18 @@ CREATE INDEX IF NOT EXISTS idx_jobs_role_category ON public.jobs (role_category)
 CREATE INDEX IF NOT EXISTS idx_jobs_source ON public.jobs (source);
 CREATE INDEX IF NOT EXISTS idx_evaluations_match_score ON public.evaluations (match_score DESC);
 CREATE INDEX IF NOT EXISTS idx_evaluations_applicable ON public.evaluations (is_applicable);
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON public.users (username);
 
 -- Enable Row Level Security (RLS) with full anon access for the Early Bird client
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.evaluations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scrape_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.email_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Allow read & write access with anon/service API keys
 DROP POLICY IF EXISTS "Allow all for jobs" ON public.jobs;
@@ -84,3 +137,16 @@ CREATE POLICY "Allow all for scrape_runs" ON public.scrape_runs FOR ALL USING (t
 
 DROP POLICY IF EXISTS "Allow all for app_settings" ON public.app_settings;
 CREATE POLICY "Allow all for app_settings" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for users" ON public.users;
+CREATE POLICY "Allow all for users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for email_verifications" ON public.email_verifications;
+CREATE POLICY "Allow all for email_verifications" ON public.email_verifications FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for user_preferences" ON public.user_preferences;
+CREATE POLICY "Allow all for user_preferences" ON public.user_preferences FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for user_sessions" ON public.user_sessions;
+CREATE POLICY "Allow all for user_sessions" ON public.user_sessions FOR ALL USING (true) WITH CHECK (true);
+

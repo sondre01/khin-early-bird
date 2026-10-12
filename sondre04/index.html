@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#090A0D]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Khin Early Bird | AI Job Hunt & Qualification Matcher</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            850: '#1c1d22',
+                            900: '#141518',
+                            950: '#0c0d0f'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #090A0D; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        .phase-pulse {
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        .cover-page-sheet {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background-color: #090A0D;
+            transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 1.5s ease;
+            will-change: transform;
+            box-shadow: 0 40px 80px -10px rgba(0, 0, 0, 0.95);
+            transform: translateY(0);
+        }
+        .cover-page-sheet.lifted {
+            transform: translateY(-100%);
+            pointer-events: none;
+        }
+        /* Anti-flicker reload state: immediately suppresses cover page & unhides navbar when session is active */
+        html.session-active #cover-page-overlay {
+            transform: translateY(-100%) !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            transition: none !important;
+        }
+        html.session-active #main-navbar {
+            display: block !important;
+        }
+        html.session-active #auth-portal-overlay {
+            display: none !important;
+        }
+    </style>
+    <script>
+        (function() {
+            try {
+                const path = window.location.pathname.toLowerCase();
+                const isDirect = path.includes('/sondre04') ||
+                                 path.includes('/sodre04') ||
+                                 window.location.search.includes('sondre04');
+                const hasSession = sessionStorage.getItem('is_owner_session') === 'true' ||
+                                   sessionStorage.getItem('cover_page_lifted') === 'true' ||
+                                   (localStorage.getItem('visitor_auth_token') && !isDirect);
+                if (hasSession) {
+                    document.documentElement.classList.add('session-active');
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body class="h-full flex flex-col font-sans bg-[#090A0D] text-zinc-300 antialiased selection:bg-zinc-700 selection:text-white">
+
+    <!-- ========================================== -->
+    <!-- COVER PAGE OVERLAY (WELCOME HERO & LIFT-UP) -->
+    <!-- ========================================== -->
+    <div id="cover-page-overlay" onclick="handleCoverPageClick(event)" class="cover-page-sheet flex flex-col justify-between text-white select-none overflow-y-auto">
+        <!-- Subtle Ambient Background Glows -->
+        <div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-b from-zinc-700/20 via-zinc-800/10 to-transparent blur-3xl pointer-events-none rounded-full"></div>
+        <div class="absolute -bottom-40 right-10 w-[400px] h-[300px] bg-emerald-500/5 blur-3xl pointer-events-none rounded-full"></div>
+
+        <!-- Top Header Bar on Cover -->
+        <div class="relative z-10 max-w-7xl w-full mx-auto p-6 md:p-8 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl shadow-lg">
+                    🦅
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-base tracking-tight text-white">Khin Early Bird</span>
+                        <span class="px-2 py-0.5 text-[10px] font-mono uppercase rounded-full bg-zinc-900 text-zinc-300 border border-zinc-700">Public Release</span>
+                    </div>
+                    <p class="text-xs text-zinc-400">Autonomous Overnight Application Discovery & AI Qualification Validator</p>
+                </div>
+            </div>
+            
+            <div class="hidden sm:flex items-center space-x-2 text-xs font-mono text-zinc-400 bg-zinc-900/80 px-3.5 py-1.5 rounded-xl border border-zinc-800">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active Platforms: Indeed &bull; LinkedIn &bull; Jobstreet</span>
+            </div>
+        </div>
+
+        <!-- Center Welcoming Hero -->
+        <div class="relative z-10 max-w-4xl mx-auto px-6 py-4 text-center space-y-6">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs font-mono text-zinc-300 shadow-sm">
+                <span class="text-amber-400">⚡</span>
+                <span>Priority Indexing for Fresh Overnight Job Listings</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
+                Find Your Preferred Job <br>
+                <span class="bg-gradient-to-r from-white via-zinc-300 to-zinc-500 bg-clip-text text-transparent">Before Everyone Else</span>
+            </h1>
+
+            <p class="text-sm sm:text-base md:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+                Welcome to <strong>Khin Early Bird</strong>. Tailored to help every job seeker discover their target role and location. Indexes fresh overnight postings across <strong>Indeed</strong>, <strong>LinkedIn</strong>, and <strong>Jobstreet</strong>, evaluated with <strong>Gemini AI</strong> and dispatched every morning at <strong>8:00 AM</strong>.
+            </p>
+
+            <!-- Feature Badges -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4 text-left max-w-2xl mx-auto text-xs">
+                <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+                    <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">01 / Priority Ingestion</div>
+                    <div class="font-semibold text-white">Overnight Tri-Platform Scraping</div>
+                    <div class="text-zinc-400 text-[11px] mt-1 leading-normal">Prioritizes earliest job applications across Indeed, LinkedIn, & Jobstreet.</div>
+                </div>
+                <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+                    <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">02 / Gemini AI Setup</div>
+                    <div class="font-semibold text-white">Smart Preference Engine</div>
+                    <div class="text-zinc-400 text-[11px] mt-1 leading-normal">Write what you want or select suggestions; Gemini AI tailors your setup.</div>
+                </div>
+                <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition">
+                    <div class="text-zinc-500 font-mono text-[10px] uppercase tracking-wider mb-1">03 / Morning Briefing</div>
+                    <div class="font-semibold text-white">Daily 8:00 AM Gmail Dispatch</div>
+                    <div class="text-zinc-400 text-[11px] mt-1 leading-normal">Verified Gmail authentication delivers fresh, un-emailed opportunities.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signaling Arrow: Tap Screen to Enter -->
+        <div class="relative z-10 pb-8 flex flex-col items-center justify-center cursor-pointer group">
+            <div class="text-xs uppercase tracking-widest font-mono text-zinc-400 group-hover:text-white transition-all flex items-center space-x-2 mb-2">
+                <span>Tap screen to enter</span>
+            </div>
+            <div class="w-12 h-12 rounded-full border border-zinc-700 bg-zinc-900/90 flex items-center justify-center text-white shadow-2xl group-hover:border-zinc-400 group-hover:scale-110 transition-all animate-bounce">
+                <svg class="w-5 h-5 text-zinc-200 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- AUTHENTICATION PORTAL (SIGN IN / SIGN UP) -->
+    <!-- ========================================== -->
+    <div id="auth-portal-overlay" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-[#090A0D]/95 backdrop-blur-md overflow-y-auto transition-opacity duration-300">
+        <div class="max-w-md w-full bg-[#121316] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-6">
+            <!-- Auth Header -->
+            <div class="p-6 border-b border-zinc-800/80 bg-zinc-900/40 text-center relative">
+                <button onclick="lowerCoverPage()" class="absolute left-4 top-4 text-xs font-mono text-zinc-500 hover:text-white transition flex items-center space-x-1" title="View welcome screen">
+                    <span>&uarr; Cover</span>
+                </button>
+                <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl mx-auto mb-2 shadow-sm">🦅</div>
+                <h2 class="text-lg font-bold text-white tracking-tight">Khin Early Bird</h2>
+                <p class="text-xs text-zinc-400 mt-0.5">Autonomous Job Ingestion & Notification Portal</p>
+                
+                <!-- Toggle Tabs: Sign In / Sign Up -->
+                <div class="flex bg-zinc-900/90 p-1 rounded-xl border border-zinc-800 text-xs font-medium mt-4">
+                    <button id="auth-tab-signin" onclick="switchAuthTab('signin')" class="flex-1 py-1.5 rounded-lg text-black bg-white shadow-xs transition font-semibold">
+                        Sign In
+                    </button>
+                    <button id="auth-tab-signup" onclick="switchAuthTab('signup')" class="flex-1 py-1.5 rounded-lg text-zinc-400 hover:text-white transition font-medium">
+                        Create Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content: SIGN IN -->
+            <div id="auth-form-signin" class="p-6 space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Email or Fixated Username</label>
+                    <input type="text" id="signin-identifier" placeholder="gamboa.khinandrei@gmail.com or khinag" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Password</label>
+                        <button type="button" onclick="togglePasswordVisibility('signin-password')" class="text-[10px] text-zinc-500 hover:text-zinc-300">Show/Hide</button>
+                    </div>
+                    <input type="password" id="signin-password" placeholder="Enter your password" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                </div>
+
+                <div id="signin-error" class="hidden p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs"></div>
+
+                <button onclick="handleSignIn()" id="btn-submit-signin" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center space-x-2">
+                    <span>Sign In to Dashboard &rarr;</span>
+                </button>
+            </div>
+
+            <!-- Tab Content: SIGN UP -->
+            <div id="auth-form-signup" class="p-6 space-y-4 hidden">
+                <!-- STEP 1: Basic Info -->
+                <div id="signup-step-1" class="space-y-3.5">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Full Name</label>
+                        <input type="text" id="signup-fullname" oninput="handleFullNameInput(this.value)" placeholder="e.g. Khin Andrei Gamboa" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                    </div>
+
+                    <!-- Fixated Username Live Preview Box -->
+                    <div class="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 text-left space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono uppercase text-zinc-500">Fixated Username Format</span>
+                            <span id="signup-username-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-zinc-800 text-white border border-zinc-700">@username</span>
+                        </div>
+                        <p class="text-[11px] text-zinc-400 leading-normal">
+                            Computed from first name + initials of next names (e.g. <strong class="text-zinc-300">Khin Andrei Gamboa</strong> &rarr; <strong class="text-zinc-200">@khinag</strong>).
+                        </p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Gmail / Email Address</label>
+                        <input type="email" id="signup-email" placeholder="your.name@gmail.com" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                        <p class="text-[10px] text-zinc-500">Used for daily 8:00 AM morning job application alerts.</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Password</label>
+                        <input type="password" id="signup-password" placeholder="Choose a password (min 6 chars)" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition">
+                    </div>
+
+                    <div id="signup-error" class="hidden p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs"></div>
+
+                    <button onclick="handleSendVerificationCode()" id="btn-send-code" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center space-x-2">
+                        <span>Send Gmail Verification Code &rarr;</span>
+                    </button>
+                </div>
+
+                <!-- STEP 2: OTP Verification -->
+                <div id="signup-step-2" class="space-y-4 hidden">
+                    <div class="text-center space-y-1">
+                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800 text-amber-400 text-sm mb-1">🔐</div>
+                        <h3 class="text-sm font-bold text-white">Gmail Authentication</h3>
+                        <p class="text-xs text-zinc-400">
+                            Enter the 6-digit verification code sent to <br>
+                            <strong class="text-white font-mono" id="otp-target-email"></strong>
+                        </p>
+                    </div>
+
+                    <div class="space-y-1.5 text-center">
+                        <input type="text" id="signup-otp-code" maxlength="6" placeholder="------" class="w-48 mx-auto text-center font-mono font-bold tracking-[8px] text-xl bg-[#090A0D] border border-zinc-700 rounded-xl py-2.5 text-white focus:outline-none focus:border-white transition">
+                        <p class="text-[10px] text-zinc-500">Code is valid for 10 minutes.</p>
+                    </div>
+
+                    <div id="otp-error" class="hidden p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs text-center"></div>
+
+                    <button onclick="handleVerifyCode()" id="btn-verify-otp" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center space-x-2">
+                        <span>Verify & Continue &rarr;</span>
+                    </button>
+
+                    <div class="flex items-center justify-between text-xs text-zinc-400 pt-1">
+                        <button onclick="resendOtpCode()" id="btn-resend-otp" class="hover:text-white underline">Resend Code</button>
+                        <button onclick="returnToSignupStep1()" class="hover:text-white">Edit Info</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Gemini Preference Onboarding -->
+                <div id="signup-step-3" class="space-y-3.5 hidden">
+                    <div class="text-center space-y-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-amber-300 border border-zinc-700">AI Powered</span>
+                        <h3 class="text-sm font-bold text-white">Setup Scraping Preferences</h3>
+                        <p class="text-[11px] text-zinc-400 leading-normal">
+                            Write what you want or select a suggested path, and Gemini AI will formulate the optimal search filters for you.
+                        </p>
+                    </div>
+
+                    <!-- Prompt input area -->
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-mono uppercase text-zinc-500">Your Goals or Dream Setup (Freeform)</label>
+                        <textarea id="onboarding-gemini-prompt" rows="3" placeholder="e.g. Fresh BS Computer Engineering grad looking for junior software engineer or python roles in Pasig or Makati, hybrid or remote..." class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 custom-scrollbar"></textarea>
+                    </div>
+
+                    <!-- Quick Prompt Suggestions Chips -->
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="fillOnboardingPrompt('Fresh graduate software engineer specializing in Python, SQL, and React, open to Metro Manila & remote')" class="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 px-2 py-1 rounded-md transition">
+                            🎓 Software Eng
+                        </button>
+                        <button type="button" onclick="fillOnboardingPrompt('Junior Data Analyst and Data Engineer with SQL and ETL skills in NCR')" class="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 px-2 py-1 rounded-md transition">
+                            📊 Data Analytics
+                        </button>
+                        <button type="button" onclick="fillOnboardingPrompt('Entry level IT tech support and network operations specialist in Metro Manila')" class="text-[10px] bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 px-2 py-1 rounded-md transition">
+                            🛠️ IT Support
+                        </button>
+                    </div>
+
+                    <button type="button" onclick="runOnboardingGeminiAdvisor()" id="btn-onboarding-gemini" class="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 py-2 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2">
+                        <span>🤖 Auto-Configure with Gemini AI</span>
+                    </button>
+
+                    <!-- Preview of Configured Preferences -->
+                    <div id="onboarding-prefs-preview" class="p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs space-y-2 text-zinc-300">
+                        <div id="onboarding-gemini-summary" class="text-[11px] text-zinc-400 italic">
+                            Default configuration loaded. Click Gemini AI above to auto-tune based on your prompt.
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                            <div>Categories: <strong class="text-white" id="onboarding-cats-count">2 selected</strong></div>
+                            <div>Location: <strong class="text-white" id="onboarding-loc-val">Metro Manila</strong></div>
+                            <div>Alerts: <strong class="text-emerald-400">8:00 AM Daily</strong></div>
+                            <div>Priority: <strong class="text-white">Indeed &bull; LinkedIn &bull; Jobstreet</strong></div>
+                        </div>
+                    </div>
+
+                    <button onclick="finishOnboardingAndEnterDashboard()" id="btn-finish-onboarding" class="w-full bg-white hover:bg-zinc-200 text-black py-2.5 px-4 rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center space-x-2">
+                        <span>Save & Enter My Dashboard &rarr;</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header id="main-navbar" class="hidden bg-[#0E0F12] border-b border-zinc-800/90 text-zinc-100 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Subtitle -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-lg shadow-xs">
+                        🦅
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-base tracking-tight text-white">Khin Early Bird</span>
+                            <span class="px-2 py-0.5 text-[10px] font-mono uppercase rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">AI Agent</span>
+                        </div>
+                        <p class="text-xs text-zinc-500">Job Ingestion & Qualification Validation for <strong id="header-user-display-name">Khin Andrei Gamboa</strong></p>
+                    </div>
+                </div>
+
+                <!-- Center Nav Tabs -->
+                <nav class="hidden md:flex space-x-1 bg-zinc-900/90 p-1 rounded-xl border border-zinc-800 text-xs font-medium">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-tab px-3.5 py-1.5 rounded-lg text-black bg-white shadow-xs transition">
+                        Dashboard
+                    </button>
+                    <button onclick="switchTab('jobs')" id="nav-jobs" class="nav-tab px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition">
+                        Job Explorer
+                    </button>
+                    <button onclick="switchTab('phases')" id="nav-phases" class="nav-tab px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition">
+                        System Phases
+                    </button>
+                    <button onclick="switchTab('profile')" id="nav-profile" class="nav-tab px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition">
+                        Resume Profile
+                    </button>
+                    <button onclick="switchTab('settings')" id="nav-settings" class="nav-tab px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-white transition">
+                        Settings
+                    </button>
+                </nav>
+
+                <!-- Actions -->
+                <div class="flex items-center space-x-2.5">
+                    <div class="hidden lg:flex items-center space-x-2 text-xs font-mono text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                        <span>Daily Run: <strong class="text-zinc-200" id="header-schedule-time">08:00 AM</strong></span>
+                    </div>
+
+                    <button onclick="triggerPipelineRun()" id="btn-run-pipeline" class="flex items-center space-x-2 bg-white hover:bg-zinc-200 text-black px-3 py-1.5 rounded-xl font-semibold text-xs shadow-xs transition transform active:scale-95">
+                        <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                        <span class="hidden sm:inline">Run Scraper</span>
+                    </button>
+
+                    <!-- User Profile & Action Dropdown -->
+                    <div class="flex items-center space-x-2 border-l border-zinc-800 pl-2.5">
+                        <button onclick="openPreferencesModal()" class="hidden md:flex items-center space-x-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-2.5 py-1.5 rounded-xl text-xs font-medium border border-zinc-800 transition" title="Customize AI Scraping Parameters">
+                            <span>✨ Preferences</span>
+                        </button>
+
+                        <div class="relative group">
+                            <button id="header-user-btn" class="flex items-center space-x-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1.5 rounded-xl text-xs transition">
+                                <span class="w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-white" id="header-user-avatar">K</span>
+                                <span class="font-mono text-zinc-200 hidden sm:inline" id="header-user-handle">@khinag</span>
+                            </button>
+                            
+                            <div class="absolute right-0 mt-2 w-48 bg-[#141518] border border-zinc-800 rounded-xl shadow-2xl py-1 hidden group-hover:block hover:block z-50">
+                                <div class="px-3 py-2 border-b border-zinc-800/80">
+                                    <div class="text-xs font-semibold text-white truncate" id="header-dropdown-name">Khin Andrei Gamboa</div>
+                                    <div class="text-[10px] text-zinc-400 font-mono truncate" id="header-dropdown-email">gamboa.khinandrei@gmail.com</div>
+                                </div>
+                                <button onclick="openPreferencesModal()" class="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 flex items-center space-x-2">
+                                    <span>✨ AI Preferences</span>
+                                </button>
+                                <button onclick="lowerCoverPage()" class="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800 flex items-center space-x-2">
+                                    <span>🦅 Welcome Screen</span>
+                                </button>
+                                <div class="border-t border-zinc-800/80 my-1"></div>
+                                <button onclick="handleSignOut()" class="w-full text-left px-3 py-1.5 text-xs text-rose-400 hover:bg-rose-950/30 flex items-center space-x-2">
+                                    <span>Sign Out</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: DASHBOARD -->
+        <!-- ========================================== -->
+        <section id="tab-dashboard" class="tab-pane space-y-6">
+            <!-- Welcome Banner -->
+            <div class="bg-[#121316] border border-zinc-800/90 rounded-2xl p-6 text-zinc-200 shadow-sm relative overflow-hidden">
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="space-y-1.5">
+                        <div class="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-md bg-zinc-900 text-zinc-400 border border-zinc-800 text-[11px] font-mono">
+                            <span>Pasig City &bull; Remote &bull; Hybrid</span>
+                        </div>
+                        <h1 class="text-xl font-bold text-white tracking-tight">Welcome back, Khin Andrei</h1>
+                        <p class="text-xs text-zinc-400 max-w-2xl leading-relaxed">
+                            Early Bird continuously extracts listings across <strong>LinkedIn</strong>, <strong>Jobstreet PH</strong>, and <strong>Indeed</strong>. Roles are segregated into <em>Internships</em> and <em>Regular</em> jobs and evaluated by <strong>Gemini AI</strong>.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <button onclick="switchTab('jobs')" class="bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl text-xs font-semibold shadow-xs transition">
+                            Browse Matches &rarr;
+                        </button>
+                        <button onclick="previewEmailDigest()" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 px-4 py-2 rounded-xl text-xs font-medium transition flex items-center space-x-1.5">
+                            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                            <span>Preview Digest</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Total Jobs -->
+                <div class="bg-[#121316] p-5 rounded-2xl border border-zinc-800/80 shadow-xs flex items-center space-x-4">
+                    <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800/80 text-zinc-300 flex items-center justify-center">
+                        <i data-lucide="briefcase" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-white font-mono" id="stat-total-jobs">0</div>
+                        <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Total Scraped</div>
+                    </div>
+                </div>
+
+                <!-- High Matches (80%+) -->
+                <div class="bg-[#121316] p-5 rounded-2xl border border-zinc-800/80 shadow-xs flex items-center space-x-4">
+                    <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800/80 text-zinc-300 flex items-center justify-center">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-white font-mono" id="stat-high-matches">0</div>
+                        <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">High Match (80%+)</div>
+                    </div>
+                </div>
+
+                <!-- Internships Segregation -->
+                <div class="bg-[#121316] p-5 rounded-2xl border border-zinc-800/80 shadow-xs flex items-center space-x-4 cursor-pointer hover:border-zinc-700 transition" onclick="filterByJobType('Internship')">
+                    <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800/80 text-zinc-300 flex items-center justify-center">
+                        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-white font-mono" id="stat-internships">0</div>
+                        <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Internships</div>
+                    </div>
+                </div>
+
+                <!-- Regular Jobs Segregation -->
+                <div class="bg-[#121316] p-5 rounded-2xl border border-zinc-800/80 shadow-xs flex items-center space-x-4 cursor-pointer hover:border-zinc-700 transition" onclick="filterByJobType('Regular')">
+                    <div class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800/80 text-zinc-300 flex items-center justify-center">
+                        <i data-lucide="building-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-white font-mono" id="stat-regular-jobs">0</div>
+                        <div class="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">Regular / Entry-Level</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Domain & Source Breakdown -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Target Role Distribution -->
+                <div class="bg-[#121316] p-6 rounded-2xl border border-zinc-800/90 shadow-xs lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+                            <i data-lucide="layers" class="w-4 h-4 text-zinc-400"></i>
+                            <span>Target Role Distribution</span>
+                        </h2>
+                        <span class="text-xs text-zinc-500">Evaluated against Khin's 5 targeted resumes</span>
+                    </div>
+
+                    <div id="role-breakdown-list" class="space-y-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Source Status & Email Alert -->
+                <div class="bg-[#121316] p-6 rounded-2xl border border-zinc-800/90 shadow-xs space-y-5">
+                    <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+                        <i data-lucide="radio" class="w-4 h-4 text-zinc-400"></i>
+                        <span>Platform Sources</span>
+                    </h2>
+
+                    <div class="space-y-2.5">
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-7 h-7 rounded-lg bg-zinc-800 text-zinc-200 font-mono font-bold text-xs flex items-center justify-center">in</span>
+                                <div>
+                                    <div class="text-xs font-semibold text-zinc-200">LinkedIn Philippines</div>
+                                    <div class="text-[10px] text-zinc-500">Guest Search API</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60" id="src-cnt-linkedin">Active</span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-7 h-7 rounded-lg bg-zinc-800 text-zinc-200 font-mono font-bold text-xs flex items-center justify-center">JS</span>
+                                <div>
+                                    <div class="text-xs font-semibold text-zinc-200">Jobstreet Philippines</div>
+                                    <div class="text-[10px] text-zinc-500">Regional GraphQL & Search</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60" id="src-cnt-jobstreet">Active</span>
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-7 h-7 rounded-lg bg-zinc-800 text-zinc-200 font-mono font-bold text-xs flex items-center justify-center">ID</span>
+                                <div>
+                                    <div class="text-xs font-semibold text-zinc-200">Indeed Philippines</div>
+                                    <div class="text-[10px] text-zinc-500">Direct Search Engine</div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60" id="src-cnt-indeed">Active</span>
+                        </div>
+                    </div>
+
+                    <!-- Email Digest Status Card -->
+                    <div class="p-4 rounded-xl bg-zinc-900/80 border border-zinc-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400">Email Delivery</span>
+                            <i data-lucide="send" class="w-3.5 h-3.5 text-zinc-400"></i>
+                        </div>
+                        <div class="text-xs text-zinc-400">
+                            Dispatched to:
+                        </div>
+                        <div class="text-xs font-mono font-medium text-zinc-200 bg-[#090A0D] p-2 rounded-lg border border-zinc-800">
+                            gamboa.khinandrei@gmail.com
+                        </div>
+                        <button onclick="testEmailNotification()" class="w-full mt-2 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-white py-2 rounded-lg transition shadow-xs">
+                            Send Instant Test Email
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top High-Match Opportunities Preview -->
+            <div class="bg-[#121316] p-6 rounded-2xl border border-zinc-800/90 shadow-xs space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-white">Featured High-Match Opportunities</h2>
+                        <p class="text-xs text-zinc-500">Ranked by Gemini AI match score against Khin's experience & certifications</p>
+                    </div>
+                    <button onclick="switchTab('jobs')" class="text-xs font-medium text-zinc-400 hover:text-white flex items-center space-x-1">
+                        <span>View All Listings</span>
+                        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <div id="dashboard-top-jobs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[160px]">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: JOB EXPLORER -->
+        <!-- ========================================== -->
+        <section id="tab-jobs" class="tab-pane hidden space-y-6">
+            <!-- Filter Bar -->
+            <div class="bg-[#121316] p-5 rounded-2xl border border-zinc-800/90 shadow-xs space-y-4">
+                
+                <!-- Application View Segment: Active Openings vs Applied History vs Saved -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Feed:</span>
+                        <div class="inline-flex p-1 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium">
+                            <button onclick="setStatusView('active')" id="btn-view-active" class="status-view-btn px-3 py-1.5 rounded-lg bg-white text-black shadow-xs transition flex items-center space-x-1.5">
+                                <span>⚡ Active Openings</span>
+                            </button>
+                            <button onclick="setStatusView('applied')" id="btn-view-applied" class="status-view-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>✓ Applied History</span>
+                                <span id="badge-applied-count" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-zinc-800 text-zinc-300">0</span>
+                            </button>
+                            <button onclick="setStatusView('saved')" id="btn-view-saved" class="status-view-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>★ Bookmarked</span>
+                            </button>
+                            <button onclick="setStatusView('all')" id="btn-view-all" class="status-view-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>👁 All / History</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-[11px] text-zinc-500 font-mono hidden sm:block" id="feed-status-hint">
+                        Showing unapplied opportunities (applied roles automatically archived)
+                    </div>
+                </div>
+
+                <!-- Primary Segregation: Internships vs Regular -->
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800/80 pb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-[10px] font-mono uppercase text-zinc-500 tracking-wider">Segregation:</span>
+                        <div class="inline-flex p-1 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium">
+                            <button onclick="setJobTypeFilter('all')" id="btn-seg-all" class="seg-btn px-3 py-1.5 rounded-lg bg-white text-black shadow-xs transition">
+                                All Opportunities
+                            </button>
+                            <button onclick="setJobTypeFilter('Internship')" id="btn-seg-intern" class="seg-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>🎓 Internships & Trainees</span>
+                            </button>
+                            <button onclick="setJobTypeFilter('Regular')" id="btn-seg-regular" class="seg-btn px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white transition flex items-center space-x-1.5">
+                                <span>💼 Regular (0 Exp / Fresh Grad)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" id="search-input" onkeyup="handleSearchKey(event)" placeholder="Search title, company, skill..." class="w-full text-xs pl-8 pr-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-2.5"></i>
+                    </div>
+                </div>
+
+                <!-- Secondary Filters: Role Category, Source, Location, Minimum Score, Status -->
+                <div class="flex flex-wrap items-center gap-2.5 text-xs">
+                    <!-- Role Category Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Role:</label>
+                        <select id="filter-category" onchange="fetchJobs()" class="bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500">
+                            <option value="all">All Domains</option>
+                            <option value="software_engineering">Software Engineering</option>
+                            <option value="web_development">Web Development</option>
+                            <option value="it_tech_support">IT Tech Support & Operations</option>
+                            <option value="data_analytics">Data Analytics</option>
+                            <option value="data_engineering">Data Engineering</option>
+                            <option value="data_science">Data Science & AI</option>
+                            <option value="qa_testing">QA & Testing</option>
+                        </select>
+                    </div>
+
+                    <!-- Source Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Source:</label>
+                        <select id="filter-source" onchange="fetchJobs()" class="bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500">
+                            <option value="all">All Sources</option>
+                            <option value="LinkedIn">LinkedIn</option>
+                            <option value="Jobstreet">Jobstreet</option>
+                            <option value="Indeed">Indeed</option>
+                        </select>
+                    </div>
+
+                    <!-- Location Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Location:</label>
+                        <select id="filter-location" onchange="fetchJobs()" class="bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500">
+                            <option value="ncr" selected>📍 NCR & Remote (Default)</option>
+                            <option value="remote">🌐 Remote Only</option>
+                            <option value="ncr_onsite">🏢 NCR On-site / Hybrid</option>
+                            <option value="all">🌏 All Locations</option>
+                        </select>
+                    </div>
+
+                    <!-- Match Score Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Match:</label>
+                        <select id="filter-score" onchange="fetchJobs()" class="bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500">
+                            <option value="0">All Match Scores</option>
+                            <option value="triple">⭐⭐⭐ Triple Verified (3/3)</option>
+                            <option value="dual">⭐⭐ Dual Verified (2+/3)</option>
+                            <option value="80">High Match Only (80%+)</option>
+                            <option value="60">Moderate & High (60%+)</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Status:</label>
+                        <select id="filter-status" onchange="fetchJobs()" class="bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500">
+                            <option value="all">All Active</option>
+                            <option value="new">New</option>
+                            <option value="saved">Bookmarked</option>
+                            <option value="applied">Applied</option>
+                            <option value="dismissed">🚫 Hidden / Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- Quick Hide Applied Checkbox -->
+                    <label class="flex items-center space-x-1.5 cursor-pointer bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 hover:bg-zinc-800 transition select-none">
+                        <input type="checkbox" id="toggle-hide-applied" checked onchange="handleHideAppliedCheckboxChange()" class="rounded border-zinc-700 bg-zinc-900 text-white focus:ring-0">
+                        <span class="text-xs text-zinc-300">Hide Applied</span>
+                    </label>
+
+                    <!-- Posted Recency Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Posted:</label>
+                        <select id="filter-posted" onchange="fetchJobs()" class="bg-[#16171B] border border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-200 focus:outline-none focus:border-zinc-500">
+                            <option value="all">Anytime</option>
+                            <option value="24h">⚡ Last 24 Hours</option>
+                            <option value="3d">✨ Last 3 Days</option>
+                            <option value="7d">📅 Last 7 Days</option>
+                            <option value="14d">Last 14 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
+                    </div>
+
+                    <!-- Sort By Priority Filter -->
+                    <div class="flex items-center space-x-1">
+                        <label class="text-zinc-500 font-mono text-[11px]">Sort:</label>
+                        <select id="filter-sort" onchange="fetchJobs()" class="bg-zinc-800 border border-zinc-700 text-white rounded-lg px-2.5 py-1.5 font-medium focus:outline-none">
+                            <option value="recent">📅 Newest First</option>
+                            <option value="score">🌟 Highest Match Score</option>
+                            <option value="company">🏢 Company (A-Z)</option>
+                        </select>
+                    </div>
+
+                    <button onclick="resetFilters()" class="text-zinc-500 hover:text-zinc-300 ml-auto flex items-center space-x-1 text-xs">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span>Reset Filters</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Jobs List Container -->
+            <div id="jobs-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[300px]">
+                <!-- Dynamically rendered by JS -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="jobs-empty" class="hidden bg-[#121316] p-12 rounded-2xl border border-zinc-800/90 text-center space-y-3">
+                <div class="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 mx-auto flex items-center justify-center">
+                    <i data-lucide="inbox" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-sm font-semibold text-zinc-200">No jobs match your current filters</h3>
+                <p class="text-xs text-zinc-500 max-w-sm mx-auto">Try broadening your role domain, setting segregation to 'All Opportunities', or run the scraper to gather new listings.</p>
+                <button onclick="resetFilters()" class="text-xs font-semibold bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl transition shadow-xs">
+                    Clear All Filters
+                </button>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: SYSTEM PHASES & LIVE PIPELINE -->
+        <!-- ========================================== -->
+        <section id="tab-phases" class="tab-pane hidden space-y-6">
+            <div class="bg-[#121316] p-6 rounded-2xl border border-zinc-800/90 shadow-xs space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-white">System Architecture & Pipeline Phasing</h2>
+                    <p class="text-xs text-zinc-500">Lifecycle of how Khin Early Bird ingests, structures, validates, and dispatches job matches</p>
+                </div>
+
+                <!-- 4 Phase Stepper Diagram -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Phase 1 -->
+                    <div id="phase-card-1" class="phase-card border border-zinc-800/90 rounded-xl p-4 bg-zinc-900/60 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="w-6 h-6 rounded-full bg-zinc-800 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center border border-zinc-700">1</span>
+                            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Ingestion</span>
+                        </div>
+                        <h3 class="text-xs font-semibold text-white">Data Extraction</h3>
+                        <p class="text-[11px] text-zinc-400 mt-1 leading-relaxed">Multi-source scrapers pull real-time listings from LinkedIn, Jobstreet PH, and Indeed.</p>
+                        <div class="mt-3 flex flex-wrap gap-1">
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">LinkedIn</span>
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">Jobstreet</span>
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">Indeed</span>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2 -->
+                    <div id="phase-card-2" class="phase-card border border-zinc-800/90 rounded-xl p-4 bg-zinc-900/60 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="w-6 h-6 rounded-full bg-zinc-800 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center border border-zinc-700">2</span>
+                            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Transform</span>
+                        </div>
+                        <h3 class="text-xs font-semibold text-white">Transformation & Segregation</h3>
+                        <p class="text-[11px] text-zinc-400 mt-1 leading-relaxed">Deduplicates listings, cleans text, and segregates <strong>Internships</strong> vs <strong>Regular Jobs</strong>.</p>
+                        <div class="mt-3 flex flex-wrap gap-1">
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">SHA Deduplication</span>
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">Segregation</span>
+                        </div>
+                    </div>
+
+                    <!-- Phase 3 -->
+                    <div id="phase-card-3" class="phase-card border border-zinc-800/90 rounded-xl p-4 bg-zinc-900/60 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="w-6 h-6 rounded-full bg-zinc-800 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center border border-zinc-700">3</span>
+                            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Intelligence</span>
+                        </div>
+                        <h3 class="text-xs font-semibold text-white">AI Validation & Scoring</h3>
+                        <p class="text-[11px] text-zinc-400 mt-1 leading-relaxed">Gemini AI evaluates job requirements against Khin's 5 targeted resumes, computing 0-100% scores.</p>
+                        <div class="mt-3 flex flex-wrap gap-1">
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">Gemini 2.5 Flash</span>
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">TF-IDF Vector</span>
+                        </div>
+                    </div>
+
+                    <!-- Phase 4 -->
+                    <div id="phase-card-4" class="phase-card border border-zinc-800/90 rounded-xl p-4 bg-zinc-900/60 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="w-6 h-6 rounded-full bg-zinc-800 text-zinc-200 text-xs font-mono font-bold flex items-center justify-center border border-zinc-700">4</span>
+                            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Delivery</span>
+                        </div>
+                        <h3 class="text-xs font-semibold text-white">Dispatch & Persistence</h3>
+                        <p class="text-[11px] text-zinc-400 mt-1 leading-relaxed">Saves structured records to SQLite database and sends an email digest to your Gmail.</p>
+                        <div class="mt-3 flex flex-wrap gap-1">
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">Email Digest</span>
+                            <span class="px-1.5 py-0.5 rounded bg-zinc-850 text-zinc-300 text-[10px] font-mono border border-zinc-800">SQLite WAL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Pipeline Progress Bar -->
+                <div id="pipeline-status-box" class="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 text-white space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <span id="pipeline-spinner" class="hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            <span class="text-xs font-semibold" id="pipeline-status-title">Pipeline Status: Ready</span>
+                        </div>
+                        <span class="text-xs font-mono font-bold text-white" id="pipeline-percent-label">0%</span>
+                    </div>
+
+                    <div class="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                        <div id="pipeline-progress-bar" class="bg-white h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+
+                    <div class="text-xs text-zinc-400" id="pipeline-status-desc">
+                        Click "Run Scraper Now" above or let the automated daily scheduler execute at 08:00 AM.
+                    </div>
+                </div>
+
+                <!-- Real-time Live Log Console -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                            <span>Live Execution Terminal</span>
+                        </span>
+                        <button onclick="clearConsoleLog()" class="text-xs text-zinc-500 hover:text-zinc-300">Clear</button>
+                    </div>
+                    <div id="live-console-log" class="bg-[#090A0D] text-zinc-300 font-mono text-xs p-4 rounded-xl h-64 overflow-y-auto custom-scrollbar border border-zinc-800 space-y-1">
+                        <div class="text-zinc-600">// Live scraping and AI validation output will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: RESUME PROFILE MATRIX -->
+        <!-- ========================================== -->
+        <section id="tab-profile" class="tab-pane hidden space-y-6">
+            <div class="bg-[#121316] p-6 rounded-2xl border border-zinc-800/90 shadow-xs space-y-6">
+                <!-- Profile Header -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-bold text-xl flex items-center justify-center">
+                            KG
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white" id="profile-name">Khin Andrei Gamboa</h2>
+                            <p class="text-xs text-zinc-400">
+                                🎓 BS Computer Engineering (RTU &bull; Dean's List) &bull; 📍 Pasig City, Philippines
+                            </p>
+                            <p class="text-xs text-zinc-400 font-mono mt-0.5">gamboa.khinandrei@gmail.com &bull; +63 992 421 5130</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 rounded-full bg-zinc-800 text-zinc-200 border border-zinc-700 text-xs font-mono font-medium">5 Resumes Loaded</span>
+                    </div>
+                </div>
+
+                <!-- 5 Resume Files Detected -->
+                <div>
+                    <h3 class="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-3">Target Resumes in /documents/resume:</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 flex items-center space-x-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400 flex-shrink-0"></i>
+                            <div>
+                                <div class="text-xs font-semibold text-zinc-200">khin_andrei_gamboa_resume_dev.pdf</div>
+                                <div class="text-[10px] text-zinc-400 font-mono">Web Dev & Software Engineering</div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 flex items-center space-x-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400 flex-shrink-0"></i>
+                            <div>
+                                <div class="text-xs font-semibold text-zinc-200">khin_andrei_gamboa_resume_data.pdf</div>
+                                <div class="text-[10px] text-zinc-400 font-mono">Data Analyst & Data Engineering</div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 flex items-center space-x-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400 flex-shrink-0"></i>
+                            <div>
+                                <div class="text-xs font-semibold text-zinc-200">khin_andrei_gamboa_resume_it.pdf</div>
+                                <div class="text-[10px] text-zinc-400 font-mono">IT Support & Systems Operations</div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 flex items-center space-x-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400 flex-shrink-0"></i>
+                            <div>
+                                <div class="text-xs font-semibold text-zinc-200">khin_andrei_gamboa_resume_qa.pdf</div>
+                                <div class="text-[10px] text-zinc-400 font-mono">QA Testing & Test Automation</div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 flex items-center space-x-3">
+                            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400 flex-shrink-0"></i>
+                            <div>
+                                <div class="text-xs font-semibold text-zinc-200">khin_andrei_gamboa_resume.pdf</div>
+                                <div class="text-[10px] text-zinc-400 font-mono">Master Comprehensive CV</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Structured Competencies Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <!-- Certifications -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                            <i data-lucide="award" class="w-4 h-4 text-zinc-400"></i>
+                            <span>Industry Certifications</span>
+                        </h4>
+                        <div class="space-y-2 text-xs">
+                            <div class="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-between">
+                                <span class="font-medium text-zinc-200">Associate Data Engineer</span>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">DataCamp Verified</span>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-between">
+                                <span class="font-medium text-zinc-200">Associate Data Analyst</span>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">DataCamp</span>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-between">
+                                <span class="font-medium text-zinc-200">Data Fundamentals</span>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">IBM SkillsBuild & TESDA</span>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-between">
+                                <span class="font-medium text-zinc-200">Python Essentials 1</span>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">Cisco & OpenEDG</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Work Experience -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                            <i data-lucide="briefcase" class="w-4 h-4 text-zinc-400"></i>
+                            <span>Experience Highlights</span>
+                        </h4>
+                        <div class="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 space-y-2 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="font-semibold text-white">IT Developer & Administrator Intern</span>
+                                <span class="text-[10px] font-mono text-zinc-400">Jan 2026 – June 2026</span>
+                            </div>
+                            <div class="text-xs text-zinc-300">Staff Domain</div>
+                            <ul class="list-disc pl-4 space-y-1 text-zinc-400 text-[11px] leading-relaxed">
+                                <li>Engineered modular automation tooling & CLI scripts in PowerShell to automate workstation configs and diagnostics.</li>
+                                <li>Migrated 20,000+ assets into Snipe-IT relational database structures with zero downtime, cutting provisioning latency by 80%.</li>
+                                <li>Integrated custom scripts with Active Directory and Azure AD / Microsoft Entra ID APIs for endpoint provisioning.</li>
+                                <li>Resolved Tier 1 & 2 tickets, configured enterprise VPNs (Tailscale, OpenVPN), and verified ITMS releases in Jira.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects -->
+                <div class="space-y-3 pt-2">
+                    <h4 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                        <i data-lucide="code-2" class="w-4 h-4 text-zinc-400"></i>
+                        <span>Featured Projects in Profile</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-1">
+                            <div class="font-semibold text-white">Web-Based Ticketing & Queue Analytics</div>
+                            <div class="text-[11px] font-mono text-zinc-400">Python, Flask, SQL, React.js, Vercel</div>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed">Full-stack support ticketing engine with RBAC and real-time analytics dashboards serving queries under 150ms.</p>
+                        </div>
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-1">
+                            <div class="font-semibold text-white">Four-in-One Vital Sign Kiosk System</div>
+                            <div class="text-[11px] font-mono text-zinc-400">Flask, MySQL, React.js, YOLOv11, PyTest</div>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed">3-tier backend service streaming telemetry from 5 biomedical sensors; automated risk prediction.</p>
+                        </div>
+                        <div class="p-3 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-1">
+                            <div class="font-semibold text-white">Social Media Analytics Automated ETL</div>
+                            <div class="text-[11px] font-mono text-zinc-400">Python, PostgreSQL, Pandas, Docker, cron</div>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed">End-to-end data validation and schema normalization across 10,000+ transaction batches in Docker.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: SETTINGS & AUTOMATION -->
+        <!-- ========================================== -->
+        <section id="tab-settings" class="tab-pane hidden space-y-6">
+            <div class="bg-[#121316] p-6 rounded-2xl border border-zinc-800/90 shadow-xs space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-white">Configuration & Notification Settings</h2>
+                    <p class="text-xs text-zinc-500">Manage Gemini AI validation key, Gmail SMTP delivery, and daily automation schedule</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left: AI & API Keys -->
+                    <div class="space-y-4">
+                        <h3 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                            <i data-lucide="cpu" class="w-4 h-4 text-zinc-400"></i>
+                            <span>Gemini AI Configuration</span>
+                        </h3>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-medium text-zinc-300">Google Gemini API Key</label>
+                            <div class="relative">
+                                <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full text-xs font-mono px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500">
+                                <button type="button" onclick="togglePasswordVisibility('input-gemini-key')" class="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-200">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-zinc-500">
+                                Uses your Gemini subscription or Google AI Studio key (`gemini-2.5-flash`).
+                            </p>
+                        </div>
+
+                        <!-- Schedule Setting -->
+                        <div class="space-y-1.5 pt-2">
+                            <label class="block text-xs font-medium text-zinc-300">Daily Automated Run Time (24h format)</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="time" id="input-schedule-time" value="08:00" class="text-xs px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 font-mono font-semibold focus:outline-none focus:border-zinc-500">
+                                <span class="text-xs text-zinc-500">Philippine Standard Time (PHT)</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-500">Runs every morning automatically via background scheduler or GitHub Actions.</p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Email Notifications -->
+                    <div class="space-y-4">
+                        <h3 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                            <i data-lucide="mail" class="w-4 h-4 text-zinc-400"></i>
+                            <span>Gmail SMTP Alerts</span>
+                        </h3>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-medium text-zinc-300">Notification Email Recipient</label>
+                            <input type="text" id="input-user-email" disabled value="gamboa.khinandrei@gmail.com" class="w-full text-xs px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-zinc-400">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-medium text-zinc-300">Gmail App Password (16 characters)</label>
+                            <div class="relative">
+                                <input type="password" id="input-smtp-password" placeholder="xxxx xxxx xxxx xxxx" class="w-full text-xs font-mono px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500">
+                                <button type="button" onclick="togglePasswordVisibility('input-smtp-password')" class="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-200">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-zinc-500">
+                                Generate in Google Account &rarr; Security &rarr; 2-Step Verification &rarr; App Passwords.
+                            </p>
+                        </div>
+
+                        <div class="pt-2 flex items-center space-x-3">
+                            <button onclick="testEmailNotification()" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-medium px-3 py-2 rounded-xl transition flex items-center space-x-1.5">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                <span>Send Test Email</span>
+                            </button>
+                            <button onclick="previewEmailDigest()" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-medium px-3 py-2 rounded-xl transition flex items-center space-x-1.5">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                <span>View Latest HTML Digest</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Full Width: Cloud Database (Supabase) -->
+                    <div class="col-span-1 md:col-span-2 border-t border-zinc-800/80 pt-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-medium uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                                <i data-lucide="database" class="w-4 h-4 text-zinc-400"></i>
+                                <span>Supabase Cloud Database (Real-Time Ingestion & Vercel Persistence)</span>
+                            </h3>
+                            <span id="supabase-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-zinc-900 text-zinc-400 border-zinc-800">
+                                Checking...
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium text-zinc-300">Supabase Project URL</label>
+                                <input type="text" id="input-supabase-url" placeholder="https://xxxxxxxx.supabase.co" class="w-full text-xs font-mono px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium text-zinc-300">Supabase API Key (Anon or Service Role)</label>
+                                <div class="relative">
+                                    <input type="password" id="input-supabase-key" placeholder="eyJhbGciOi..." class="w-full text-xs font-mono px-3 py-2 rounded-xl bg-[#16171B] border border-zinc-800 text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500">
+                                    <button type="button" onclick="togglePasswordVisibility('input-supabase-key')" class="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-200">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3 pt-1">
+                            <button type="button" onclick="syncLocalToSupabase()" id="btn-sync-supabase" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-medium px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5">
+                                <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+                                <span>Sync Local Jobs to Supabase Cloud</span>
+                            </button>
+                            <span id="supabase-sync-msg" class="text-xs text-zinc-400"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-zinc-800/80 pt-4 flex items-center justify-between">
+                    <span id="settings-status-msg" class="text-xs font-medium text-zinc-400"></span>
+                    <button onclick="saveSettings()" class="bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs transition">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Job Detail Modal -->
+    <div id="job-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-[#121316] rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-800">
+            <!-- Modal Header -->
+            <div class="p-6 border-b border-zinc-800/80 flex items-start justify-between bg-zinc-900/40">
+                <div class="space-y-1.5 pr-4">
+                    <div class="flex items-center space-x-2">
+                        <span id="modal-source" class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700/80">Source</span>
+                        <span id="modal-type" class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-850 text-zinc-300 border border-zinc-800">Job Type</span>
+                        <span id="modal-category" class="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-zinc-400 border border-zinc-800">Role Category</span>
+                    </div>
+                    <h3 id="modal-title" class="text-lg font-bold text-white">Job Title</h3>
+                    <p class="text-xs text-zinc-400 flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span>🏢 <strong id="modal-company" class="text-zinc-200">Company</strong></span>
+                        <span class="text-zinc-600">&bull;</span>
+                        <span>📍 <span id="modal-location">Location</span></span>
+                        <span class="text-zinc-600">&bull;</span>
+                        <span>💼 <span id="modal-work-type">Remote</span></span>
+                        <span class="text-zinc-600">&bull;</span>
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 font-mono text-[11px]">🕒 Posted: <span id="modal-posted-date">Today</span></span>
+                    </p>
+                </div>
+                <button onclick="closeJobModal()" class="text-zinc-500 hover:text-white p-1 rounded-lg transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-5 text-xs text-zinc-300">
+                <!-- AI Score Banner -->
+                <div class="p-4 rounded-xl bg-zinc-900/70 border border-zinc-800 flex items-center justify-between">
+                    <div>
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Multi-Validator Ensemble Score</div>
+                        <div class="text-sm font-semibold text-white" id="modal-match-level">High Match</div>
+                    </div>
+                    <div class="text-2xl font-bold font-mono text-white" id="modal-match-score">95%</div>
+                </div>
+
+                <!-- Tri-Validator Multi-Layer Consensus Panel -->
+                <div class="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-medium uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-zinc-300"></i>
+                            <span>Tri-Validator Multi-Layer Consensus</span>
+                        </span>
+                        <span id="modal-validators-consensus" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-zinc-800 text-zinc-200 border-zinc-700">
+                            3/3 Verified
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2.5 pt-1">
+                        <!-- Validator 1: Gemini AI -->
+                        <div class="p-2.5 rounded-lg bg-[#16171B] border border-zinc-800/90 text-center">
+                            <div class="text-[10px] font-mono text-zinc-400 uppercase">1. Gemini AI</div>
+                            <div class="text-base font-bold text-white font-mono mt-0.5" id="modal-v-gemini-score">90%</div>
+                            <div class="text-[10px] font-mono text-zinc-400" id="modal-v-gemini-status">Approved</div>
+                        </div>
+
+                        <!-- Validator 2: ML Vector Matcher -->
+                        <div class="p-2.5 rounded-lg bg-[#16171B] border border-zinc-800/90 text-center">
+                            <div class="text-[10px] font-mono text-zinc-400 uppercase">2. ML Vector</div>
+                            <div class="text-base font-bold text-white font-mono mt-0.5" id="modal-v-ml-score">79%</div>
+                            <div class="text-[10px] font-mono text-zinc-400" id="modal-v-ml-status">Approved</div>
+                        </div>
+
+                        <!-- Validator 3: Criteria & Preferences -->
+                        <div class="p-2.5 rounded-lg bg-[#16171B] border border-zinc-800/90 text-center">
+                            <div class="text-[10px] font-mono text-zinc-400 uppercase">3. Criteria Fit</div>
+                            <div class="text-base font-bold text-white font-mono mt-0.5" id="modal-v-pref-score">100%</div>
+                            <div class="text-[10px] font-mono text-zinc-400" id="modal-v-pref-status">Approved</div>
+                        </div>
+                    </div>
+
+                    <!-- Validator Detail List -->
+                    <div id="modal-validator-checks" class="text-[11px] text-zinc-400 space-y-1 pt-1.5 border-t border-zinc-800/60">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+
+                <!-- Match Reasons -->
+                <div class="space-y-1.5">
+                    <h4 class="font-medium uppercase text-[11px] tracking-wider text-zinc-400">Why You Match:</h4>
+                    <ul id="modal-reasons" class="list-disc pl-4 space-y-1 text-zinc-300">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <!-- Skills Alignment -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <h4 class="font-medium uppercase text-[11px] tracking-wider text-zinc-400 mb-1.5">Matched Qualifications:</h4>
+                        <div id="modal-matched-skills" class="flex flex-wrap gap-1"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium uppercase text-[11px] tracking-wider text-zinc-400 mb-1.5">Target Growth Areas:</h4>
+                        <div id="modal-missing-skills" class="flex flex-wrap gap-1"></div>
+                    </div>
+                </div>
+
+                <!-- Full Description -->
+                <div class="space-y-1.5 border-t border-zinc-800/80 pt-3">
+                    <h4 class="font-medium uppercase text-[11px] tracking-wider text-zinc-400">Job Description:</h4>
+                    <div id="modal-description" class="text-zinc-400 leading-relaxed bg-[#090A0D] p-3.5 rounded-xl border border-zinc-800/80 max-h-48 overflow-y-auto custom-scrollbar"></div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-zinc-800/80 bg-zinc-900/40 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleJobStatus(currentModalJobId, 'saved')" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition">
+                        Bookmark
+                    </button>
+                    <button onclick="toggleJobStatus(currentModalJobId, 'applied')" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-white transition">
+                        ✓ Mark Applied
+                    </button>
+                    <button onclick="toggleJobStatus(currentModalJobId, 'dismissed')" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition flex items-center space-x-1" title="Hide/Cancel out this job">
+                        <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                        <span>Hide / Cancel</span>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a id="modal-google-jobs-link" href="#" target="_blank" rel="noopener noreferrer" class="border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-mono text-xs px-3 py-2 rounded-xl transition flex items-center space-x-1.5" title="Search this role across Google for Jobs">
+                        <span>🔍 Google</span>
+                    </a>
+                    <a id="modal-linkedin-link" href="#" target="_blank" rel="noopener noreferrer" class="border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-mono text-xs px-3 py-2 rounded-xl transition flex items-center space-x-1.5" title="Search or apply on LinkedIn Philippines">
+                        <span>💼 LinkedIn</span>
+                    </a>
+                    <a id="modal-apply-link" href="#" target="_blank" rel="noopener noreferrer" onclick="handleModalApplyClick(event)" class="bg-white hover:bg-zinc-200 text-black font-semibold text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center space-x-1.5">
+                        <span id="modal-apply-btn-text">Apply on Site</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PREFERENCES & GEMINI ADVISOR MODAL -->
+    <!-- ========================================== -->
+    <div id="preferences-modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden overflow-y-auto">
+        <div class="max-w-xl w-full bg-[#121316] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden my-8">
+            <div class="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/40">
+                <div class="flex items-center space-x-2">
+                    <span class="text-lg">⚙️</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Scraping & Alert Preferences</h3>
+                        <p class="text-xs text-zinc-400">Customizable settings powered by Google Gemini AI</p>
+                    </div>
+                </div>
+                <button onclick="closePreferencesModal()" class="text-zinc-500 hover:text-white p-1 rounded-lg">✕</button>
+            </div>
+
+            <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <!-- Gemini Prompt Box -->
+                <div class="p-4 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white flex items-center space-x-1.5">
+                            <span>🤖 Gemini AI Setup Assistant</span>
+                        </span>
+                        <span class="text-[10px] font-mono text-zinc-400">gemini-2.5-flash</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-400 leading-normal">
+                        Type what roles, locations, or priority you want, and Gemini will automatically configure and optimize your scraping parameters.
+                    </p>
+                    <textarea id="modal-gemini-prompt" rows="2" placeholder="e.g. I want associate software engineering and backend roles in Pasig or BGC with Python, prioritize fresh overnight postings..." class="w-full bg-[#090A0D] border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500"></textarea>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex flex-wrap gap-1">
+                            <button type="button" onclick="fillModalPrompt('Software Engineering and React in Metro Manila')" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded">💻 Software</button>
+                            <button type="button" onclick="fillModalPrompt('Junior Data Analyst and SQL roles in NCR')" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded">📊 Data</button>
+                            <button type="button" onclick="fillModalPrompt('IT Tech Support and Operations in Manila')" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded">🛠️ IT</button>
+                        </div>
+                        <button type="button" onclick="runModalGeminiAdvisor()" id="btn-modal-gemini" class="bg-white hover:bg-zinc-200 text-black px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                            Run AI Advisor
+                        </button>
+                    </div>
+
+                    <div id="modal-gemini-feedback" class="hidden p-2.5 rounded-lg bg-zinc-800/80 border border-zinc-700 text-xs text-zinc-200"></div>
+                </div>
+
+                <!-- Role Categories Selection -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Target Role Categories</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs" id="pref-categories-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Custom Search Keywords -->
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Precision Search Keywords (Comma-Separated)</label>
+                    <input type="text" id="pref-keywords" placeholder="Junior Software Engineer, Associate Developer..." class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
+                </div>
+
+                <!-- Target Location & NCR Only Toggle -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Target Location</label>
+                        <input type="text" id="pref-location" value="Metro Manila, Philippines" class="w-full bg-[#090A0D] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-500">
+                    </div>
+                    <div class="flex items-center space-x-2 pt-6">
+                        <input type="checkbox" id="pref-ncr-only" class="w-4 h-4 rounded bg-zinc-900 border-zinc-700 accent-white">
+                        <label for="pref-ncr-only" class="text-xs text-zinc-300">Restrict to NCR / Metro Manila & Remote</label>
+                    </div>
+                </div>
+
+                <!-- Platforms Priority -->
+                <div class="space-y-2">
+                    <label class="text-[11px] font-mono uppercase tracking-wider text-zinc-400">Priority Platforms (Tri-Platform Scraper)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="flex items-center space-x-2 p-2.5 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer">
+                            <input type="checkbox" id="pref-plat-indeed" checked class="accent-white">
+                            <span>Indeed PH</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2.5 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer">
+                            <input type="checkbox" id="pref-plat-linkedin" checked class="accent-white">
+                            <span>LinkedIn</span>
+                        </label>
+                        <label class="flex items-center space-x-2 p-2.5 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer">
+                            <input type="checkbox" id="pref-plat-jobstreet" checked class="accent-white">
+                            <span>Jobstreet</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Daily Morning Notification -->
+                <div class="p-3.5 rounded-xl bg-zinc-900/50 border border-zinc-800 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-white">Daily 8:00 AM Morning Job Digest</div>
+                        <div class="text-[11px] text-zinc-400">Delivers fresh unnotified postings to your verified Gmail daily</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="pref-daily-alert" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-zinc-800 bg-zinc-900/40 flex items-center justify-between">
+                <button onclick="closePreferencesModal()" class="text-xs text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg border border-zinc-800">Cancel</button>
+                <button onclick="saveModalPreferences()" id="btn-save-prefs" class="bg-white hover:bg-zinc-200 text-black px-4 py-2 rounded-xl text-xs font-semibold transition">
+                    Save Preferences
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend JS logic -->
+    <script src="/static/js/app.js?v=2.1"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

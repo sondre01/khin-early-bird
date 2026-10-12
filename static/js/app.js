@@ -203,17 +203,18 @@ function setupFilterAutoSave() {
 }
 
 function initApp() {
+    const savedTab = localStorage.getItem(TAB_STORAGE_KEY);
+    if (savedTab && savedTab !== 'dashboard') {
+        switchTab(savedTab);
+    }
+
+    checkAuthState();
     restoreFilterState();
     setupFilterAutoSave();
     loadStats();
     fetchJobs();
     loadSettings();
     pollPipelineStatus();
-
-    const savedTab = localStorage.getItem(TAB_STORAGE_KEY);
-    if (savedTab && savedTab !== 'dashboard') {
-        switchTab(savedTab);
-    }
 }
 
 if (document.readyState === 'loading') {
@@ -1107,3 +1108,762 @@ async function loadProfile() {
         console.error('Error loading profile:', e);
     }
 }
+
+// =====================================================================
+// AUTHENTICATION, COVER PAGE & PREFERENCES ENGINE
+// =====================================================================
+
+const AUTH_TOKEN_KEY = 'earlybird_auth_token';
+let currentUser = null;
+let currentPendingEmail = '';
+
+function getAuthHeaders() {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+// 1. Cover Page Lift-up & Navigation
+function liftCoverPage() {
+    const overlay = document.getElementById('cover-page-overlay');
+    if (overlay) {
+        overlay.classList.add('lifted');
+    }
+    sessionStorage.setItem('cover_page_lifted', 'true');
+    // If not authenticated, ensure auth portal is visible underneath
+    if (!currentUser) {
+        const portal = document.getElementById('auth-portal-overlay');
+        if (portal) portal.classList.remove('hidden');
+    }
+}
+
+function lowerCoverPage() {
+    const overlay = document.getElementById('cover-page-overlay');
+    if (overlay) {
+        overlay.classList.remove('lifted');
+        overlay.style.transition = '';
+        overlay.style.transform = '';
+        overlay.style.visibility = '';
+        overlay.style.pointerEvents = '';
+    }
+    document.documentElement.classList.remove('session-active');
+    sessionStorage.removeItem('cover_page_lifted');
+}
+
+function handleCoverPageClick(event) {
+    if (event.target.closest('button, a, input, textarea, select')) return;
+    liftCoverPage();
+}
+
+// 2. Fixated Username Live Generator
+function generateFixatedUsername(fullName) {
+    if (!fullName) return '';
+    const cleaned = fullName.replace(/[^a-zA-Z\s]/g, '').trim();
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    const first = parts[0].toLowerCase();
+    const initials = parts.slice(1).map(p => p[0].toLowerCase()).join('');
+    return `${first}${initials}`;
+}
+
+function handleFullNameInput(val) {
+    const username = generateFixatedUsername(val);
+    const badge = document.getElementById('signup-username-badge');
+    if (badge) {
+        badge.innerText = username ? `@${username}` : '@username';
+    }
+}
+
+// 3. Auth Tabs
+function switchAuthTab(tab) {
+    const signinBtn = document.getElementById('auth-tab-signin');
+    const signupBtn = document.getElementById('auth-tab-signup');
+    const signinForm = document.getElementById('auth-form-signin');
+    const signupForm = document.getElementById('auth-form-signup');
+
+    if (tab === 'signin') {
+        signinBtn.className = 'flex-1 py-1.5 rounded-lg text-black bg-white shadow-xs transition font-semibold';
+        signupBtn.className = 'flex-1 py-1.5 rounded-lg text-zinc-400 hover:text-white transition font-medium';
+        signinForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+    } else {
+        signupBtn.className = 'flex-1 py-1.5 rounded-lg text-black bg-white shadow-xs transition font-semibold';
+        signinBtn.className = 'flex-1 py-1.5 rounded-lg text-zinc-400 hover:text-white transition font-medium';
+        signinForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+    }
+}
+
+// 4. Sign In Logic
+async function handleSignIn() {
+    const identifier = document.getElementById('signin-identifier')?.value.trim();
+    const password = document.getElementById('signin-password')?.value.trim();
+    const errorEl = document.getElementById('signin-error');
+    const btn = document.getElementById('btn-submit-signin');
+
+    if (!identifier || !password) {
+        if (errorEl) {
+            errorEl.innerText = 'Please enter both email/username and password.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (errorEl) errorEl.classList.add('hidden');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Signing in...';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/sign-in`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+            if (data.user && data.user.email !== 'gamboa.khinandrei@gmail.com') {
+                localStorage.setItem('visitor_auth_token', data.token);
+            }
+            currentUser = data.user;
+            updateUserHeaderUI(currentUser);
+            document.getElementById('auth-portal-overlay')?.classList.add('hidden');
+            document.getElementById('main-navbar')?.classList.remove('hidden');
+            liftCoverPage();
+            showToast(`Welcome back, ${currentUser.full_name}!`);
+            loadPreferences();
+        } else if (data.requires_verification) {
+            currentPendingEmail = data.email;
+            switchAuthTab('signup');
+            showSignupStep(2);
+            document.getElementById('otp-target-email').innerText = data.email;
+            showToast(data.message);
+        } else {
+            if (errorEl) {
+                errorEl.innerText = data.detail || data.message || 'Invalid credentials.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+    } catch (e) {
+        if (errorEl) {
+            errorEl.innerText = 'Connection error: ' + e.message;
+            errorEl.classList.remove('hidden');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Sign In to Dashboard &rarr;</span>';
+        }
+    }
+}
+
+// 5. Sign Up Step Flow
+function showSignupStep(stepNumber) {
+    document.getElementById('signup-step-1')?.classList.add('hidden');
+    document.getElementById('signup-step-2')?.classList.add('hidden');
+    document.getElementById('signup-step-3')?.classList.add('hidden');
+    const target = document.getElementById(`signup-step-${stepNumber}`);
+    if (target) target.classList.remove('hidden');
+}
+
+function returnToSignupStep1() {
+    showSignupStep(1);
+}
+
+async function handleSendVerificationCode() {
+    const fullName = document.getElementById('signup-fullname')?.value.trim();
+    const email = document.getElementById('signup-email')?.value.trim();
+    const password = document.getElementById('signup-password')?.value.trim();
+    const errorEl = document.getElementById('signup-error');
+    const btn = document.getElementById('btn-send-code');
+
+    if (!fullName || !email || !password) {
+        if (errorEl) {
+            errorEl.innerText = 'Please fill out all fields.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (password.length < 6) {
+        if (errorEl) {
+            errorEl.innerText = 'Password must be at least 6 characters.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (errorEl) errorEl.classList.add('hidden');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Sending Gmail code...';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/sign-up`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full_name: fullName, email, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            currentPendingEmail = email;
+            document.getElementById('otp-target-email').innerText = email;
+            showSignupStep(2);
+            showToast('6-digit code sent to ' + email);
+        } else {
+            if (errorEl) {
+                errorEl.innerText = data.detail || data.message || 'Error sending code.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+    } catch (e) {
+        if (errorEl) {
+            errorEl.innerText = 'Error: ' + e.message;
+            errorEl.classList.remove('hidden');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Send Gmail Verification Code &rarr;</span>';
+        }
+    }
+}
+
+async function handleVerifyCode() {
+    const code = document.getElementById('signup-otp-code')?.value.trim();
+    const errorEl = document.getElementById('otp-error');
+    const btn = document.getElementById('btn-verify-otp');
+
+    if (!code || code.length < 6) {
+        if (errorEl) {
+            errorEl.innerText = 'Please enter the complete 6-digit code.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (errorEl) errorEl.classList.add('hidden');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Verifying...';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/verify-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: currentPendingEmail, code })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+            if (data.user && data.user.email !== 'gamboa.khinandrei@gmail.com') {
+                localStorage.setItem('visitor_auth_token', data.token);
+            }
+            currentUser = data.user;
+            updateUserHeaderUI(currentUser);
+            showToast('Gmail verified! Configure your preferences.');
+            showSignupStep(3);
+        } else {
+            if (errorEl) {
+                errorEl.innerText = data.detail || data.message || 'Verification failed.';
+                errorEl.classList.remove('hidden');
+            }
+        }
+    } catch (e) {
+        if (errorEl) {
+            errorEl.innerText = 'Error: ' + e.message;
+            errorEl.classList.remove('hidden');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>Verify & Continue &rarr;</span>';
+        }
+    }
+}
+
+async function resendOtpCode() {
+    if (!currentPendingEmail) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/resend-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: currentPendingEmail })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('New verification code sent to ' + currentPendingEmail);
+        } else {
+            alert(data.message || 'Could not resend code.');
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+// 6. Gemini Preference Advisor on Sign-up Onboarding
+function fillOnboardingPrompt(text) {
+    const el = document.getElementById('onboarding-gemini-prompt');
+    if (el) el.value = text;
+}
+
+let onboardingFormSettings = {
+    target_categories: ['software_engineering', 'web_development'],
+    keywords: ['Junior Software Engineer', 'Associate Software Engineer'],
+    target_location: 'Metro Manila, Philippines',
+    filter_ncr_only: true,
+    job_types: ['Regular', 'Internship'],
+    platforms: ['indeed', 'linkedin', 'jobstreet'],
+    daily_alert_enabled: true,
+    alert_time: '08:00',
+    gemini_prompt: ''
+};
+
+async function runOnboardingGeminiAdvisor() {
+    const prompt = document.getElementById('onboarding-gemini-prompt')?.value.trim();
+    const btn = document.getElementById('btn-onboarding-gemini');
+    if (!prompt) {
+        showToast('Please type a career goal or select a suggestion chip.');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Gemini AI is analyzing & configuring...';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/user/preferences/ai-suggest`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+
+        if (data.success && data.suggestions) {
+            const s = data.suggestions;
+            onboardingFormSettings = {
+                ...onboardingFormSettings,
+                target_categories: s.target_categories || ['software_engineering'],
+                keywords: s.keywords || [],
+                target_location: s.target_location || 'Metro Manila, Philippines',
+                filter_ncr_only: s.filter_ncr_only !== false,
+                job_types: s.job_types || ['Regular', 'Internship'],
+                platforms: s.platforms || ['indeed', 'linkedin', 'jobstreet'],
+                gemini_prompt: prompt,
+                gemini_recommendations: s
+            };
+
+            const summaryEl = document.getElementById('onboarding-gemini-summary');
+            if (summaryEl) {
+                summaryEl.innerText = `✨ ${s.recommendation_summary || 'Custom parameters optimized by Gemini AI.'}`;
+                summaryEl.className = 'text-[11px] text-emerald-400 font-medium leading-relaxed';
+            }
+            const catCount = document.getElementById('onboarding-cats-count');
+            if (catCount) catCount.innerText = `${(s.target_categories || []).length} selected`;
+            const locVal = document.getElementById('onboarding-loc-val');
+            if (locVal) locVal.innerText = s.target_location || 'Metro Manila';
+            showToast('Gemini successfully formulated your scraping preferences!');
+        }
+    } catch (e) {
+        showToast('Advisor error: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = '🤖 Auto-Configure with Gemini AI';
+        }
+    }
+}
+
+async function finishOnboardingAndEnterDashboard() {
+    try {
+        await fetch(`${API_BASE}/api/user/preferences`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(onboardingFormSettings)
+        });
+    } catch (e) {}
+
+    document.getElementById('auth-portal-overlay')?.classList.add('hidden');
+    document.getElementById('main-navbar')?.classList.remove('hidden');
+    liftCoverPage();
+    showToast('Preferences active! Welcome to Khin Early Bird.');
+    loadPreferences();
+}
+
+// 7. General Preferences Modal Management
+function openPreferencesModal() {
+    const modal = document.getElementById('preferences-modal-overlay');
+    if (modal) modal.classList.remove('hidden');
+    loadPreferencesIntoModal();
+}
+
+function closePreferencesModal() {
+    const modal = document.getElementById('preferences-modal-overlay');
+    if (modal) modal.classList.add('hidden');
+}
+
+function fillModalPrompt(text) {
+    const el = document.getElementById('modal-gemini-prompt');
+    if (el) el.value = text;
+}
+
+async function loadPreferences() {
+    try {
+        const res = await fetch(`${API_BASE}/api/user/preferences`, {
+            headers: getAuthHeaders()
+        });
+        const prefs = await res.json();
+        // Populate categories container if available
+        populateCategoriesUI(prefs.target_categories || []);
+    } catch (e) {
+        console.warn('Error loading preferences:', e);
+    }
+}
+
+function populateCategoriesUI(selectedCats = []) {
+    const container = document.getElementById('pref-categories-container');
+    if (!container) return;
+
+    const availableCats = [
+        { id: 'software_engineering', label: 'Software Engineering' },
+        { id: 'web_development', label: 'Web Development' },
+        { id: 'it_tech_support', label: 'IT Tech Support & Ops' },
+        { id: 'data_analytics', label: 'Data Analytics' },
+        { id: 'data_engineering', label: 'Data Engineering' },
+        { id: 'data_science', label: 'Data Science & AI' },
+        { id: 'qa_testing', label: 'QA & Software Testing' }
+    ];
+
+    container.innerHTML = availableCats.map(c => `
+        <label class="flex items-center space-x-2 p-2 rounded-lg bg-[#090A0D] border border-zinc-800 text-xs cursor-pointer hover:border-zinc-700">
+            <input type="checkbox" value="${c.id}" class="pref-cat-checkbox accent-white" ${selectedCats.includes(c.id) ? 'checked' : ''}>
+            <span class="truncate">${c.label}</span>
+        </label>
+    `).join('');
+}
+
+async function loadPreferencesIntoModal() {
+    try {
+        const res = await fetch(`${API_BASE}/api/user/preferences`, {
+            headers: getAuthHeaders()
+        });
+        const prefs = await res.json();
+
+        populateCategoriesUI(prefs.target_categories || ['software_engineering']);
+
+        if (document.getElementById('pref-keywords')) {
+            document.getElementById('pref-keywords').value = (prefs.keywords || []).join(', ');
+        }
+        if (document.getElementById('pref-location')) {
+            document.getElementById('pref-location').value = prefs.target_location || 'Metro Manila, Philippines';
+        }
+        if (document.getElementById('pref-ncr-only')) {
+            document.getElementById('pref-ncr-only').checked = prefs.filter_ncr_only !== false;
+        }
+        if (document.getElementById('pref-daily-alert')) {
+            document.getElementById('pref-daily-alert').checked = prefs.daily_alert_enabled !== false;
+        }
+        if (prefs.platforms) {
+            document.getElementById('pref-plat-indeed').checked = prefs.platforms.includes('indeed');
+            document.getElementById('pref-plat-linkedin').checked = prefs.platforms.includes('linkedin');
+            document.getElementById('pref-plat-jobstreet').checked = prefs.platforms.includes('jobstreet');
+        }
+        if (prefs.gemini_prompt && document.getElementById('modal-gemini-prompt')) {
+            document.getElementById('modal-gemini-prompt').value = prefs.gemini_prompt;
+        }
+    } catch (e) {
+        console.error('Error reading preferences:', e);
+    }
+}
+
+async function runModalGeminiAdvisor() {
+    const prompt = document.getElementById('modal-gemini-prompt')?.value.trim();
+    const btn = document.getElementById('btn-modal-gemini');
+    const feedbackEl = document.getElementById('modal-gemini-feedback');
+
+    if (!prompt) {
+        showToast('Please type a prompt or click a sample category chip.');
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Analyzing...';
+    }
+
+    try {
+        const res = await fetch(`${API_BASE}/api/user/preferences/ai-suggest`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+
+        if (data.success && data.suggestions) {
+            const s = data.suggestions;
+            // Select suggested categories
+            document.querySelectorAll('.pref-cat-checkbox').forEach(cb => {
+                cb.checked = (s.target_categories || []).includes(cb.value);
+            });
+            // Update keywords
+            if (s.keywords && document.getElementById('pref-keywords')) {
+                document.getElementById('pref-keywords').value = s.keywords.join(', ');
+            }
+            // Update location
+            if (s.target_location && document.getElementById('pref-location')) {
+                document.getElementById('pref-location').value = s.target_location;
+            }
+            if (s.filter_ncr_only !== undefined && document.getElementById('pref-ncr-only')) {
+                document.getElementById('pref-ncr-only').checked = s.filter_ncr_only;
+            }
+
+            if (feedbackEl) {
+                feedbackEl.innerHTML = `
+                    <div class="font-semibold text-white mb-1">✨ Gemini AI Strategy:</div>
+                    <div class="text-[11px] text-zinc-300 mb-1">${s.recommendation_summary}</div>
+                    <div class="text-[10px] text-zinc-400">${s.strategic_reasoning}</div>
+                `;
+                feedbackEl.classList.remove('hidden');
+            }
+            showToast('Form updated with Gemini recommendations!');
+        }
+    } catch (e) {
+        showToast('Advisor error: ' + e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'Run AI Advisor';
+        }
+    }
+}
+
+async function saveModalPreferences() {
+    const selectedCats = Array.from(document.querySelectorAll('.pref-cat-checkbox:checked')).map(cb => cb.value);
+    const keywordsRaw = document.getElementById('pref-keywords')?.value || '';
+    const keywords = keywordsRaw.split(',').map(k => k.trim()).filter(Boolean);
+    const location = document.getElementById('pref-location')?.value.trim() || 'Metro Manila, Philippines';
+    const ncrOnly = document.getElementById('pref-ncr-only')?.checked;
+    const dailyAlert = document.getElementById('pref-daily-alert')?.checked;
+    const prompt = document.getElementById('modal-gemini-prompt')?.value.trim() || '';
+
+    const platforms = [];
+    if (document.getElementById('pref-plat-indeed')?.checked) platforms.push('indeed');
+    if (document.getElementById('pref-plat-linkedin')?.checked) platforms.push('linkedin');
+    if (document.getElementById('pref-plat-jobstreet')?.checked) platforms.push('jobstreet');
+
+    const payload = {
+        target_categories: selectedCats.length ? selectedCats : ['software_engineering'],
+        keywords,
+        target_location: location,
+        filter_ncr_only: ncrOnly,
+        platforms: platforms.length ? platforms : ['indeed', 'linkedin', 'jobstreet'],
+        daily_alert_enabled: dailyAlert,
+        alert_time: '08:00',
+        gemini_prompt: prompt
+    };
+
+    try {
+        const res = await fetch(`${API_BASE}/api/user/preferences`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Preferences updated successfully!');
+            closePreferencesModal();
+        } else {
+            showToast('Error saving: ' + (data.message || 'Unknown'));
+        }
+    } catch (e) {
+        showToast('Error saving preferences: ' + e.message);
+    }
+}
+
+// 8. Header UI & Session State
+function updateUserHeaderUI(user) {
+    if (!user) return;
+    const displayName = user.full_name || 'Khin Andrei Gamboa';
+    const username = user.username || 'khinag';
+    const email = user.email || 'gamboa.khinandrei@gmail.com';
+
+    // Show navbar once user is authenticated
+    const navbar = document.getElementById('main-navbar');
+    if (navbar) navbar.classList.remove('hidden');
+
+    const headerName = document.getElementById('header-user-display-name');
+    if (headerName) headerName.innerText = displayName;
+
+    const handle = document.getElementById('header-user-handle');
+    if (handle) handle.innerText = `@${username}`;
+
+    const avatar = document.getElementById('header-user-avatar');
+    if (avatar) avatar.innerText = displayName.charAt(0).toUpperCase();
+
+    const dropdownName = document.getElementById('header-dropdown-name');
+    if (dropdownName) dropdownName.innerText = displayName;
+
+    const dropdownEmail = document.getElementById('header-dropdown-email');
+    if (dropdownEmail) dropdownEmail.innerText = email;
+}
+
+async function checkAuthState() {
+    const portal = document.getElementById('auth-portal-overlay');
+    const navbar = document.getElementById('main-navbar');
+    const cover = document.getElementById('cover-page-overlay');
+
+    // 1. DIRECT OWNER ACCESS (/sondre04 or /sodre04)
+    const currentPath = window.location.pathname.toLowerCase();
+    const queryParams = new URLSearchParams(window.location.search);
+    const hasSecretToken = typeof window !== 'undefined' && !!window.__SECRET_AUTH_TOKEN__;
+    const isSondreDirect = (typeof window !== 'undefined' && !!window.__IS_SONDRE_DIRECT_ACCESS__) ||
+                          (typeof window !== 'undefined' && !!window.__SECRET_PATH_DETECTED__) ||
+                          hasSecretToken ||
+                          currentPath.includes('/sondre04') ||
+                          currentPath.includes('/sodre04') ||
+                          currentPath.endsWith('sondre04.html') ||
+                          currentPath.endsWith('sodre04.html') ||
+                          queryParams.has('sondre04') || 
+                          queryParams.has('sodre04') || 
+                          queryParams.get('auth') === 'sondre04' ||
+                          queryParams.get('auth') === 'sodre04';
+
+    if (isSondreDirect) {
+        // Direct Personal Access - Instantly authenticate as Khin Andrei Gamboa (admin)
+        const alreadyLifted = sessionStorage.getItem('cover_page_lifted') === 'true' || sessionStorage.getItem('is_owner_session') === 'true';
+        let token = '5IziNW4g0ws3Pu__ssUk1LdQY88LqI8gPNdmWQcmDFI';
+        currentUser = {
+            id: 'user_khin_default',
+            email: 'gamboa.khinandrei@gmail.com',
+            username: 'khinag',
+            full_name: 'Khin Andrei Gamboa',
+            is_verified: true,
+            role: 'admin'
+        };
+
+        sessionStorage.setItem('is_owner_session', 'true');
+        sessionStorage.setItem('owner_auth_token', token);
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
+
+        // Immediate synchronous UI updates (zero flicker, zero network wait)
+        updateUserHeaderUI(currentUser);
+        if (portal) portal.classList.add('hidden');
+        if (navbar) navbar.classList.remove('hidden');
+
+        if (alreadyLifted) {
+            // RELOAD FIX: Instantly suppress cover page without any animation or flicker
+            document.documentElement.classList.add('session-active');
+            if (cover) {
+                cover.classList.add('lifted');
+                cover.style.transition = 'none';
+                cover.style.transform = 'translateY(-100%)';
+                cover.style.visibility = 'hidden';
+                cover.style.pointerEvents = 'none';
+            }
+        } else {
+            // FIRST ARRIVAL: Smooth graceful curtain lift
+            sessionStorage.setItem('cover_page_lifted', 'true');
+            setTimeout(() => {
+                liftCoverPage();
+            }, 300);
+            if (!sessionStorage.getItem('toast_shown')) {
+                showToast('Welcome back, Khin Andrei! Direct admin access active.');
+                sessionStorage.setItem('toast_shown', 'true');
+            }
+        }
+
+        loadPreferences();
+
+        const savedOwnerToken = localStorage.getItem(AUTH_TOKEN_KEY);
+        if (!savedOwnerToken || savedOwnerToken === '5IziNW4g0ws3Pu__ssUk1LdQY88LqI8gPNdmWQcmDFI') {
+            fetch(`${API_BASE}/api/auth/secret-login?key=sondre04`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.token) {
+                        localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+                        sessionStorage.setItem('owner_auth_token', data.token);
+                        currentUser = data.user;
+                        updateUserHeaderUI(currentUser);
+                    }
+                })
+                .catch(() => {});
+        }
+        return;
+    }
+
+    // 2. BASE PUBLIC PORTAL (Caters to visitors & regular users creating accounts)
+    // Only auto-login if a genuine visitor session exists (NOT the owner account)
+    const visitorToken = localStorage.getItem('visitor_auth_token');
+
+    if (visitorToken) {
+        try {
+            const res = await fetch(`${API_BASE}/api/auth/me`, {
+                headers: { 'Authorization': `Bearer ${visitorToken}` }
+            });
+            const data = await res.json();
+            if (data.authenticated && data.user && data.user.email !== 'gamboa.khinandrei@gmail.com') {
+                currentUser = data.user;
+                updateUserHeaderUI(currentUser);
+                if (portal) portal.classList.add('hidden');
+                if (navbar) navbar.classList.remove('hidden');
+
+                // Instant lift on reload if visitor was already authenticated
+                document.documentElement.classList.add('session-active');
+                if (cover) {
+                    cover.classList.add('lifted');
+                    cover.style.transition = 'none';
+                    cover.style.transform = 'translateY(-100%)';
+                    cover.style.visibility = 'hidden';
+                    cover.style.pointerEvents = 'none';
+                }
+                sessionStorage.setItem('cover_page_lifted', 'true');
+                loadPreferences();
+                return;
+            }
+        } catch (e) {
+            console.warn('Visitor auth check error:', e);
+        }
+    }
+
+    // Default Unauthenticated Visitor Landing Flow
+    currentUser = null;
+    document.documentElement.classList.remove('session-active');
+    if (navbar) navbar.classList.add('hidden');
+    lowerCoverPage();
+    if (portal) portal.classList.remove('hidden');
+}
+
+async function handleSignOut() {
+    try {
+        await fetch(`${API_BASE}/api/auth/sign-out`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+    } catch (e) {}
+
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem('visitor_auth_token');
+    localStorage.removeItem('owner_auth_token');
+    sessionStorage.removeItem('is_owner_session');
+    sessionStorage.removeItem('owner_auth_token');
+    sessionStorage.removeItem('cover_page_lifted');
+    sessionStorage.removeItem('toast_shown');
+    document.documentElement.classList.remove('session-active');
+    currentUser = null;
+    document.getElementById('main-navbar')?.classList.add('hidden');
+    showToast('Signed out successfully.');
+    document.getElementById('auth-portal-overlay')?.classList.remove('hidden');
+    lowerCoverPage();
+}
+

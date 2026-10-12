@@ -2,13 +2,23 @@ import os
 import json
 import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Request, BackgroundTasks, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from app.database import get_jobs, get_job_by_id, update_job_status, get_stats, purge_ineligible_jobs
+from app.database import (
+    get_jobs, get_job_by_id, update_job_status, get_stats, purge_ineligible_jobs,
+    db_create_user, db_get_user_by_email_or_username, db_get_user_by_id,
+    db_create_verification_code, db_verify_code, db_create_session,
+    db_get_or_create_owner_session, db_get_user_by_session, db_delete_session,
+    db_get_user_preferences, db_save_user_preferences
+)
+from app.auth import (
+    generate_fixated_username, verify_password, generate_otp_code,
+    send_otp_email, get_gemini_preference_suggestions
+)
 from app.config import (
     USER_NAME, USER_EMAIL, USER_PHONE, USER_LOCATION,
     DAILY_RUN_TIME, EMAIL_NOTIFICATIONS_ENABLED, GEMINI_API_KEY,
@@ -349,4 +359,317 @@ async def api_candidate_profile():
     return {
         "structured": STRUCTURED_PROFILE,
         "resume_files": list(raw_resumes.keys())
+    }
+
+
+# =====================================================================
+# AUTHENTICATION & USER PREFERENCE SCHEMAS & ROUTES
+# =====================================================================
+
+class SignUpRequest(BaseModel):
+    full_name: str
+    email: str
+    password: str
+
+class SignInRequest(BaseModel):
+    identifier: str  # email or username
+    password: str
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+class ResendCodeRequest(BaseModel):
+    email: str
+
+class AISuggestRequest(BaseModel):
+    prompt: str
+    user_id: Optional[str] = None
+
+class UserPreferencesUpdate(BaseModel):
+    target_categories: Optional[List[str]] = None
+    keywords: Optional[List[str]] = None
+    target_location: Optional[str] = None
+    filter_ncr_only: Optional[bool] = None
+    job_types: Optional[List[str]] = None
+    platforms: Optional[List[str]] = None
+    daily_alert_enabled: Optional[bool] = None
+    alert_time: Optional[str] = None
+    gemini_prompt: Optional[str] = None
+    gemini_recommendations: Optional[Dict[str, Any]] = None
+
+def get_current_user_from_request(request: Request) -> Optional[Dict[str, Any]]:
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        token = request.query_params.get("token", "")
+    if token:
+        return db_get_user_by_session(token)
+    return None
+
+@router.get("/api/auth/preview-username")
+async def api_preview_username(full_name: str = ""):
+    """Computes fixated username live: first name + initials of next names (e.g. Khin Andrei Gamboa -> khinag)"""
+    username = generate_fixated_username(full_name)
+    return {"full_name": full_name, "username": username}
+
+@router.post("/api/auth/sign-up")
+async def api_sign_up(payload: SignUpRequest):
+    """Registers user with fixated username and dispatches 6-digit verification code to their Gmail"""
+    full_name = payload.full_name.strip()
+    email = payload.email.lower().strip()
+    password = payload.password.strip()
+
+    if not full_name:
+        raise HTTPException(status_code=400, detail="Full name is required.")
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="A valid Gmail / email address is required.")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+
+    fixated_username = generate_fixated_username(full_name)
+
+    # Check if user already exists
+    existing = db_get_user_by_email_or_username(email)
+    if existing and existing.get("is_verified"):
+        raise HTTPException(status_code=400, detail="An account with this email already exists. Please sign in.")
+
+    # Create unverified user if doesn't exist
+    if not existing:
+        try:
+            user = db_create_user(full_name=full_name, email=email, password=password, is_verified=False)
+            fixated_username = user["username"]
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        fixated_username = existing["username"]
+
+    # Generate 6-digit OTP code & save in database
+    otp_code = generate_otp_code()
+    db_create_verification_code(email=email, code=otp_code, minutes_valid=10)
+
+    # Send verification email via Gmail SMTP
+    dispatch_result = send_otp_email(recipient=email, code=otp_code, full_name=full_name)
+
+    return {
+        "success": True,
+        "message": f"6-digit verification code sent to {email}. Please check your inbox and promotions tab.",
+        "email": email,
+        "username": fixated_username,
+        "dev_code": dispatch_result.get("dev_code")  # Only present if SMTP encountered an issue
+    }
+
+@router.post("/api/auth/verify-code")
+async def api_verify_code(payload: VerifyCodeRequest):
+    """Verifies the 6-digit OTP code and issues authenticated session"""
+    email = payload.email.lower().strip()
+    code = payload.code.strip()
+
+    is_valid = db_verify_code(email=email, code=code)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code. Please request a new code.")
+
+    user = db_get_user_by_email_or_username(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found.")
+
+    token = db_create_session(user["id"])
+    user_data = {
+        "id": user["id"],
+        "email": user["email"],
+        "username": user["username"],
+        "full_name": user["full_name"],
+        "is_verified": bool(user["is_verified"]),
+        "role": user.get("role", "user")
+    }
+
+    return {
+        "success": True,
+        "message": "Account verified successfully! Welcome to Khin Early Bird.",
+        "token": token,
+        "user": user_data
+    }
+
+@router.post("/api/auth/resend-code")
+async def api_resend_code(payload: ResendCodeRequest):
+    """Resends a fresh 6-digit verification code to the registering email"""
+    email = payload.email.lower().strip()
+    user = db_get_user_by_email_or_username(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="No registered account found with that email.")
+
+    otp_code = generate_otp_code()
+    db_create_verification_code(email=email, code=otp_code, minutes_valid=10)
+    dispatch_result = send_otp_email(recipient=email, code=otp_code, full_name=user.get("full_name", "User"))
+
+    return {
+        "success": True,
+        "message": f"A new verification code was sent to {email}.",
+        "dev_code": dispatch_result.get("dev_code")
+    }
+
+@router.post("/api/auth/sign-in")
+async def api_sign_in(payload: SignInRequest):
+    """Authenticates using Gmail / username and password. Supports default Khin Andrei Gamboa account."""
+    ident = payload.identifier.strip()
+    password = payload.password.strip()
+
+    user = db_get_user_by_email_or_username(ident)
+    if not user or not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email/username or password.")
+
+    if not user.get("is_verified"):
+        # Auto-dispatch code and guide to verification
+        otp_code = generate_otp_code()
+        db_create_verification_code(email=user["email"], code=otp_code, minutes_valid=10)
+        send_otp_email(recipient=user["email"], code=otp_code, full_name=user["full_name"])
+        return {
+            "success": False,
+            "requires_verification": True,
+            "email": user["email"],
+            "message": "Your email is pending verification. We have dispatched a 6-digit code to your inbox."
+        }
+
+    token = db_create_session(user["id"])
+    user_data = {
+        "id": user["id"],
+        "email": user["email"],
+        "username": user["username"],
+        "full_name": user["full_name"],
+        "is_verified": bool(user["is_verified"]),
+        "role": user.get("role", "user")
+    }
+
+    return {
+        "success": True,
+        "message": f"Welcome back, {user['full_name']}!",
+        "token": token,
+        "user": user_data
+    }
+
+@router.get("/api/auth/me")
+async def api_auth_me(request: Request):
+    """Retrieves authenticated profile of the current active session"""
+    user = get_current_user_from_request(request)
+    if not user:
+        # Check default user if no token provided
+        default_user = db_get_user_by_email_or_username("gamboa.khinandrei@gmail.com")
+        return {
+            "authenticated": False,
+            "default_user": {
+                "id": default_user["id"],
+                "email": default_user["email"],
+                "username": default_user["username"],
+                "full_name": default_user["full_name"],
+                "role": default_user["role"]
+            } if default_user else None
+        }
+
+    return {
+        "authenticated": True,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "username": user["username"],
+            "full_name": user["full_name"],
+            "is_verified": bool(user["is_verified"]),
+            "role": user.get("role", "user")
+        }
+    }
+
+@router.post("/api/auth/sign-out")
+async def api_sign_out(request: Request):
+    """Terminates active session token"""
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        token = request.query_params.get("token", "")
+    if token:
+        db_delete_session(token)
+    return {"success": True, "message": "Signed out successfully."}
+
+@router.post("/api/auth/secret-login")
+@router.get("/api/auth/secret-login")
+async def api_secret_login(key: str = "sondre04"):
+    """Secret authentication for owner account via /sondre04 or /sodre04 path"""
+    if key.strip().lower() not in ["sondre04", "sodre04"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    user = db_get_user_by_email_or_username("gamboa.khinandrei@gmail.com")
+    if not user:
+        raise HTTPException(status_code=404, detail="Default account not found")
+    token = db_get_or_create_owner_session(user["id"])
+    return {
+        "success": True,
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "username": user["username"],
+            "full_name": user["full_name"],
+            "is_verified": bool(user["is_verified"]),
+            "role": user.get("role", "admin")
+        }
+    }
+
+@router.get("/api/user/preferences")
+async def api_get_user_preferences(request: Request, user_id: Optional[str] = None):
+    """Returns customizable scraping and notification preferences for a user"""
+    curr = get_current_user_from_request(request)
+    target_id = user_id or (curr["id"] if curr else "user_khin_default")
+    prefs = db_get_user_preferences(target_id)
+    return prefs
+
+@router.post("/api/user/preferences")
+async def api_save_user_preferences(payload: UserPreferencesUpdate, request: Request):
+    """Updates customizable scraping and notification preferences for a user"""
+    curr = get_current_user_from_request(request)
+    target_id = curr["id"] if curr else "user_khin_default"
+    
+    current_prefs = db_get_user_preferences(target_id)
+    updated = {**current_prefs}
+    
+    if payload.target_categories is not None:
+        updated["target_categories"] = payload.target_categories
+    if payload.keywords is not None:
+        updated["keywords"] = payload.keywords
+    if payload.target_location is not None:
+        updated["target_location"] = payload.target_location
+    if payload.filter_ncr_only is not None:
+        updated["filter_ncr_only"] = payload.filter_ncr_only
+    if payload.job_types is not None:
+        updated["job_types"] = payload.job_types
+    if payload.platforms is not None:
+        updated["platforms"] = payload.platforms
+    if payload.daily_alert_enabled is not None:
+        updated["daily_alert_enabled"] = payload.daily_alert_enabled
+    if payload.alert_time is not None:
+        updated["alert_time"] = payload.alert_time
+    if payload.gemini_prompt is not None:
+        updated["gemini_prompt"] = payload.gemini_prompt
+    if payload.gemini_recommendations is not None:
+        updated["gemini_recommendations"] = payload.gemini_recommendations
+
+    saved = db_save_user_preferences(target_id, updated)
+    return {"success": True, "message": "Preferences saved successfully!", "preferences": saved}
+
+@router.post("/api/user/preferences/ai-suggest")
+async def api_ai_suggest_preferences(payload: AISuggestRequest, request: Request):
+    """Calls Google Gemini 2.5 Flash to automatically analyze and formulate optimal scraping settings"""
+    prompt = payload.prompt.strip()
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Please enter a prompt or career goal description.")
+
+    suggestions = get_gemini_preference_suggestions(
+        user_prompt=prompt,
+        user_profile=STRUCTURED_PROFILE
+    )
+
+    return {
+        "success": True,
+        "prompt": prompt,
+        "suggestions": suggestions
     }
